@@ -1,0 +1,374 @@
+import React, { useState, useRef, useEffect } from "react";
+import { observer } from "mobx-react-lite";
+import { useNavigate } from "react-router-dom";
+import authStore from "../../stores/authStore";
+import instance from "../../axios/axios";
+import { getFullImageUrl } from "../../utils/imageUtils";
+import styles from "./UploadTrack.module.scss";
+
+const UploadTrack = observer(() => {
+  const [formData, setFormData] = useState({
+    title: "",
+    duration: 0,
+    genre_ids: [],
+  });
+
+  const [audioFile, setAudioFile] = useState(null);
+  const [coverImage, setCoverImage] = useState(null);
+  const [coverImagePreview, setCoverImagePreview] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [genres, setGenres] = useState([]);
+
+  const audioFileInputRef = useRef(null);
+  const coverImageInputRef = useRef(null);
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Проверяем авторизацию и статус исполнителя
+    if (!authStore.isAuthenticated) {
+      navigate("/auth");
+      return;
+    }
+
+    if (!authStore.isArtist) {
+      navigate("/settings");
+      return;
+    }
+
+    // Загружаем список жанров
+    const fetchGenres = async () => {
+      try {
+        const response = await instance.get("genres/");
+        setGenres(response.data);
+      } catch (error) {
+        console.error("Ошибка при загрузке жанров:", error);
+        setError("Не удалось загрузить список жанров");
+      }
+    };
+
+    fetchGenres();
+  }, [navigate]);
+
+  // Обработчик изменения текстовых полей
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  // Обработчик изменения жанров (множественный выбор)
+  const handleGenreChange = (e) => {
+    const options = e.target.options;
+    const selectedGenres = [];
+
+    for (let i = 0; i < options.length; i++) {
+      if (options[i].selected) {
+        selectedGenres.push(options[i].value);
+      }
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      genre_ids: selectedGenres,
+    }));
+  };
+
+  // Обработчик выбора аудиофайла
+  const handleAudioFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("audio/")) {
+      setError("Пожалуйста, выберите аудиофайл");
+      return;
+    }
+
+    setAudioFile(file);
+
+    // Извлекаем длительность аудиофайла
+    const audio = document.createElement("audio");
+    audio.src = URL.createObjectURL(file);
+
+    audio.onloadedmetadata = () => {
+      const durationInSeconds = Math.round(audio.duration);
+      setFormData((prev) => ({
+        ...prev,
+        duration: durationInSeconds,
+      }));
+    };
+
+    audio.onerror = () => {
+      setError("Не удалось прочитать аудиофайл");
+    };
+  };
+
+  // Обработчик выбора обложки
+  const handleCoverImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Пожалуйста, выберите изображение");
+      return;
+    }
+
+    setCoverImage(file);
+
+    // Создаем превью
+    const preview = URL.createObjectURL(file);
+    setCoverImagePreview(preview);
+  };
+
+  // Отправка формы
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!audioFile) {
+      setError("Пожалуйста, выберите аудиофайл");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      // Сначала загружаем обложку, если она выбрана
+      let coverUrl = null;
+      if (coverImage) {
+        const coverFormData = new FormData();
+        coverFormData.append("image", coverImage);
+        coverFormData.append("artist_id", authStore.artistProfile.id);
+
+        try {
+          const coverResponse = await instance.post(
+            "artists/upload-cover-image/",
+            coverFormData
+          );
+          coverUrl = coverResponse.data.img_cover_url;
+        } catch (coverError) {
+          console.error("Ошибка при загрузке обложки:", coverError);
+          // Продолжаем без обложки
+          coverUrl = authStore.artistProfile.img_cover_url || "";
+        }
+      }
+
+      // Сначала создадим альбом для одиночного трека (если трек не привязан к альбому)
+      const singleTrackAlbumData = {
+        title: `Сингл: ${formData.title}`,
+        description: "Отдельный трек",
+        artist_id: authStore.artistProfile.id,
+        release_date: new Date().toISOString().split("T")[0], // Сегодняшняя дата в формате YYYY-MM-DD
+        total_tracks: 1,
+        total_duration: formData.duration,
+        img_url: coverUrl || authStore.artistProfile.img_cover_url || "",
+      };
+
+      console.log(
+        "Создание альбома для одиночного трека:",
+        singleTrackAlbumData
+      );
+      const albumResponse = await instance.post(
+        "albums/",
+        singleTrackAlbumData
+      );
+      const albumId = albumResponse.data.id;
+
+      // Затем загружаем трек
+      const trackFormData = new FormData();
+      trackFormData.append("audio_file", audioFile);
+      trackFormData.append("title", formData.title);
+      trackFormData.append("artist_id", authStore.artistProfile.id);
+      trackFormData.append("duration", formData.duration);
+      trackFormData.append("album_id", albumId); // Привязываем к созданному альбому
+      trackFormData.append("track_number", 1); // Номер трека в альбоме
+
+      // Если есть обложка, добавляем URL
+      if (coverUrl) {
+        trackFormData.append("img_url", coverUrl);
+      }
+
+      // Добавляем жанры
+      formData.genre_ids.forEach((genreId) => {
+        trackFormData.append("genre_ids", genreId);
+      });
+
+      // Отладочная информация
+      console.log("Отправляем данные трека:", {
+        title: formData.title,
+        artist_id: authStore.artistProfile.id,
+        duration: formData.duration,
+        album_id: albumId,
+        track_number: 1,
+        img_url: coverUrl || "",
+        genre_ids: formData.genre_ids,
+      });
+
+      // Отправляем данные
+      const response = await instance.post("upload/track/", trackFormData);
+
+      setSuccess("Трек успешно загружен!");
+
+      // Очищаем форму
+      setFormData({
+        title: "",
+        duration: 0,
+        genre_ids: [],
+      });
+      setAudioFile(null);
+      setCoverImage(null);
+      if (coverImagePreview) URL.revokeObjectURL(coverImagePreview);
+      setCoverImagePreview(null);
+
+      // Перенаправляем на страницу трека
+      setTimeout(() => {
+        navigate(`/tracks/${response.data.id}`);
+      }, 1500);
+    } catch (error) {
+      console.error("Ошибка при загрузке трека:", error);
+      console.log("Детали ошибки:", error.response?.data);
+      console.log("Статус ошибки:", error.response?.status);
+      setError(error.response?.data?.error || "Не удалось загрузить трек");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Очищаем URL при размонтировании
+  useEffect(() => {
+    return () => {
+      if (coverImagePreview) URL.revokeObjectURL(coverImagePreview);
+    };
+  }, [coverImagePreview]);
+
+  return (
+    <div className={styles.uploadContainer}>
+      <h1 className={styles.title}>Загрузка трека</h1>
+
+      {error && <div className={styles.error}>{error}</div>}
+      {success && <div className={styles.success}>{success}</div>}
+
+      <form onSubmit={handleSubmit} className={styles.uploadForm}>
+        <div className={styles.formGroup}>
+          <label htmlFor="title">Название трека:</label>
+          <input
+            type="text"
+            id="title"
+            name="title"
+            value={formData.title}
+            onChange={handleChange}
+            required
+            className={styles.input}
+            placeholder="Введите название трека"
+          />
+        </div>
+
+        <div className={styles.formRow}>
+          <div className={styles.formGroup}>
+            <label htmlFor="audioFile">Аудиофайл:</label>
+            <div className={styles.fileInputWrapper}>
+              <input
+                type="file"
+                id="audioFile"
+                accept="audio/*"
+                ref={audioFileInputRef}
+                onChange={handleAudioFileChange}
+                required
+                className={styles.fileInput}
+              />
+              <label htmlFor="audioFile" className={styles.fileInputLabel}>
+                {audioFile ? audioFile.name : "Выберите аудиофайл"}
+              </label>
+            </div>
+            {formData.duration > 0 && (
+              <div className={styles.durationInfo}>
+                Длительность: {Math.floor(formData.duration / 60)}:
+                {String(formData.duration % 60).padStart(2, "0")}
+              </div>
+            )}
+          </div>
+
+          <div className={styles.formGroup}>
+            <label htmlFor="coverImage">Обложка трека:</label>
+            <div className={styles.imageUploadContainer}>
+              <div className={styles.imagePreviewWrapper}>
+                {coverImagePreview ? (
+                  <img
+                    src={coverImagePreview}
+                    alt="Обложка трека"
+                    className={styles.previewImg}
+                  />
+                ) : (
+                  <div className={styles.imagePlaceholder}>
+                    <span>Обложка</span>
+                  </div>
+                )}
+              </div>
+              <div className={styles.imageControls}>
+                <input
+                  type="file"
+                  id="coverImage"
+                  accept="image/*"
+                  ref={coverImageInputRef}
+                  onChange={handleCoverImageChange}
+                  className={styles.fileInput}
+                />
+                <label htmlFor="coverImage" className={styles.uploadButton}>
+                  Выбрать обложку
+                </label>
+                {coverImagePreview && (
+                  <button
+                    type="button"
+                    className={styles.cancelButton}
+                    onClick={() => {
+                      URL.revokeObjectURL(coverImagePreview);
+                      setCoverImagePreview(null);
+                      setCoverImage(null);
+                      coverImageInputRef.current.value = "";
+                    }}
+                  >
+                    Отменить
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.formGroup}>
+          <label htmlFor="genres">Жанры:</label>
+          <select
+            id="genres"
+            name="genre_ids"
+            multiple
+            value={formData.genre_ids}
+            onChange={handleGenreChange}
+            className={styles.selectMultiple}
+          >
+            {genres.map((genre) => (
+              <option key={genre.id} value={genre.id}>
+                {genre.title}
+              </option>
+            ))}
+          </select>
+          <small>Удерживайте Ctrl для выбора нескольких жанров</small>
+        </div>
+
+        <button
+          type="submit"
+          className={styles.submitButton}
+          disabled={loading || !audioFile}
+        >
+          {loading ? "Загрузка..." : "Загрузить трек"}
+        </button>
+      </form>
+    </div>
+  );
+});
+
+export default UploadTrack;

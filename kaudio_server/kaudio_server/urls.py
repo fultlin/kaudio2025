@@ -19,6 +19,20 @@ from django.urls import path, include, re_path
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+from django.conf import settings
+from django.conf.urls.static import static
+from .upload_views import ProfileImageUploadView, ArtistImageUploadView, TrackUploadView
+from kaudio import views as kaudio_views
+from rest_framework.decorators import api_view, permission_classes, parser_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.shortcuts import get_object_or_404
+from django.db.models import Sum
+from kaudio.models import Track, Artist, Album, Genre, TrackGenre
+from kaudio.serializers import TrackSerializer
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -33,9 +47,19 @@ schema_view = get_schema_view(
     permission_classes=[permissions.AllowAny],
 )
 
+# Основные URL проекта
 urlpatterns = [
+    # Административный интерфейс
     path('admin/', admin.site.urls),
+    
+    # Основные API эндпоинты
     path('api/', include('kaudio.urls')),
+    
+    # Специальные эндпоинты для загрузки файлов
+    path('api/users/upload-profile-image/', ProfileImageUploadView.as_view(), name='upload-profile-image'),
+    path('api/artists/upload-cover-image/', ArtistImageUploadView.as_view(), name='upload-artist-image'),
+    path('api/upload/track/', TrackUploadView.as_view(), name='upload-track'),    
+    # Документация API
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', 
             schema_view.without_ui(cache_timeout=0), 
             name='schema-json'),
@@ -46,3 +70,6 @@ urlpatterns = [
          schema_view.with_ui('redoc', cache_timeout=0), 
          name='schema-redoc'),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

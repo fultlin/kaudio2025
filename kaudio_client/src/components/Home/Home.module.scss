@@ -1,0 +1,49 @@
+.upper__home {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+}
+
+.track {
+  display: flex;
+  flex-direction: row;
+  border: 1px solid white;
+  margin-bottom: 5px;
+  padding: 10px 20px;
+  align-items: center;
+  gap: 20px;
+
+  &:hover {
+    cursor: pointer;
+    background-color: #606060;
+  }
+
+  &__list {
+    max-height: 460px;
+    overflow-y: scroll;
+  }
+
+  &__information__name {
+    display: block;
+    margin-bottom: 5px;
+  }
+
+  &__information__author {
+    display: block;
+    font-size: 12px;
+  }
+}
+
+.aside {
+  border-right: 2px solid $audiocolor;
+  height: 100%;
+  float: left;
+  height: 100vh;
+  padding: 10px 10px 0 0;
+}
+
+.content {
+  margin: 0 auto;
+}

@@ -1,7 +1,7 @@
-from rest_framework import viewsets, permissions, filters
-from rest_framework.decorators import action
+from rest_framework import viewsets, permissions, filters, status
+from rest_framework.decorators import action, api_view, permission_classes, parser_classes
 from rest_framework.response import Response
-from django.db.models import Q
+from django.db.models import Q, Sum
 from .models import (
     User, Artist, Genre, Album, Track, Playlist, UserActivity,
     Subscribe, UserSubscribe, UserAlbum, UserTrack, PlaylistTrack,
@@ -14,6 +14,18 @@ from .serializers import (
     UserTrackSerializer, PlaylistTrackSerializer, AlbumGenreSerializer,
     TrackGenreSerializer
 )
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.authtoken.models import Token
+from django.contrib.auth import authenticate
+from django.contrib.auth.hashers import make_password
+from rest_framework.parsers import MultiPartParser, FormParser
+from django.shortcuts import get_object_or_404
+import os
+from django.conf import settings
+import logging
+from rest_framework.views import APIView
+
+logger = logging.getLogger(__name__)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -22,6 +34,13 @@ class UserViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['username', 'email']
     ordering_fields = ['username', 'date_joined']
+    
+    def get_permissions(self):
+        if self.action == 'create':
+            permission_classes = [AllowAny]
+        else:
+            permission_classes = [IsAuthenticated]
+        return [permission() for permission in permission_classes]
 
     @action(detail=True, methods=['get'])
     def playlists(self, request, pk=None):
@@ -56,6 +75,11 @@ class UserViewSet(viewsets.ModelViewSet):
         user = self.get_object()
         user_tracks = UserTrack.objects.filter(user=user)
         serializer = UserTrackSerializer(user_tracks, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def me(self, request):
+        serializer = self.get_serializer(request.user)
         return Response(serializer.data)
 
 
@@ -436,4 +460,233 @@ class TrackGenreViewSet(viewsets.ModelViewSet):
         if genre_id is not None:
             queryset = queryset.filter(genre__id=genre_id)
         
-        return queryset 
+        return queryset
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login_view(request):
+    username = request.data.get('username')
+    password = request.data.get('password')
+        
+    try:
+        user = User.objects.get(username=username)
+        
+        if user.check_password(password):
+            token, created = Token.objects.get_or_create(user=user)
+            serializer = UserSerializer(user)
+            return Response({
+                'token': token.key,
+                'user': serializer.data
+            })
+        else:
+            return Response({
+                'error': 'Неверный пароль'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+    except User.DoesNotExist:
+        print(f"Пользователь не найден: {username}")
+        return Response({
+            'error': 'Пользователь не найден'
+        }, status=status.HTTP_401_UNAUTHORIZED)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register_view(request):
+    username = request.data.get('username')
+    email = request.data.get('email')
+    password = request.data.get('password')
+    
+    if not username or not password:
+        return Response({
+            'error': 'Необходимо указать имя пользователя и пароль'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    if User.objects.filter(username=username).exists():
+        return Response({
+            'error': 'Пользователь с таким именем уже существует'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    user = User.objects.create_user(
+        username=username,
+        email=email,
+        password=password
+    )
+    
+    token = Token.objects.create(user=user)
+    
+    return Response({
+        'message': 'Пользователь успешно зарегистрирован',
+        'token': token.key
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser, FormParser])
+def upload_track_view(request):
+    print("Вызван upload_track!")
+    print(f"HTTP метод: {request.method}")
+    print(f"FILES: {request.FILES}")
+    print(f"DATA: {request.data}")
+    
+    # Получаем данные из запроса
+    title = request.data.get('title')
+    artist_id = request.data.get('artist_id')
+    album_id = request.data.get('album_id')
+    track_number = request.data.get('track_number')
+    duration = request.data.get('duration')
+    genre_ids = request.data.getlist('genre_ids')
+    audio_file = request.FILES.get('audio_file')
+    
+    # Проверяем обязательные поля
+    if not all([title, artist_id, album_id, track_number, duration, audio_file]):
+        return Response({
+            'error': 'Не все обязательные поля заполнены'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        # Получаем связанные объекты
+        artist = get_object_or_404(Artist, id=artist_id)
+        album = get_object_or_404(Album, id=album_id)
+        
+        # Создаем трек
+        track = Track.objects.create(
+            title=title,
+            artist=artist,
+            album=album,
+            track_number=track_number,
+            release_date=album.release_date,  # Берем дату выпуска из альбома
+            duration=duration,
+            audio_file=audio_file
+        )
+        
+        # Добавляем жанры, если они указаны
+        if genre_ids:
+            for genre_id in genre_ids:
+                genre = get_object_or_404(Genre, id=genre_id)
+                TrackGenre.objects.create(track=track, genre=genre)
+        
+        # Обновляем статистику альбома
+        album.total_tracks = Track.objects.filter(album=album).count()
+        album.total_duration = Track.objects.filter(album=album).aggregate(
+            total=Sum('duration'))['total'] or 0
+        album.save()
+        
+        # Возвращаем данные созданного трека
+        serializer = TrackSerializer(track)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ProfilePhotoUploadView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+    
+    def post(self, request, format=None):
+        """Загрузка изображения профиля пользователя"""
+        print("ProfileImageUploadView POST вызван.")
+        print(f"FILES: {request.FILES}")
+        print(f"DATA: {request.data}")
+        
+        if 'image' not in request.FILES:
+            return Response({
+                'error': 'Изображение не предоставлено'
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        image = request.FILES['image']
+        user = request.user
+        
+        # Создаем директорию для хранения изображений пользователей, если ее нет
+        user_images_dir = os.path.join(settings.MEDIA_ROOT, 'profile_images')
+        if not os.path.exists(user_images_dir):
+            os.makedirs(user_images_dir)
+        
+        # Формируем имя файла, включая имя пользователя для уникальности
+        filename = f"profile_{user.id}_{image.name}"
+        filepath = os.path.join(user_images_dir, filename)
+        
+        # Сохраняем файл
+        with open(filepath, 'wb+') as destination:
+            for chunk in image.chunks():
+                destination.write(chunk)
+        
+        # Обновляем ссылку на изображение у пользователя
+        profile_image_url = f"{settings.MEDIA_URL}profile_images/{filename}"
+        user.img_profile_url = profile_image_url
+        user.save()
+        
+        return Response({
+            'img_profile_url': profile_image_url
+        }, status=status.HTTP_200_OK)
+
+
+class ArtistPhotoUploadView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+    
+    def post(self, request, format=None):
+        """Загрузка изображения исполнителя"""
+        print("ArtistImageUploadView POST вызван.")
+        print(f"FILES: {request.FILES}")
+        print(f"DATA: {request.data}")
+        
+        if 'image' not in request.FILES:
+            return Response({
+                'error': 'Изображение не предоставлено'
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        if 'artist_id' not in request.data:
+            return Response({
+                'error': 'ID исполнителя не указан'
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        image = request.FILES['image']
+        artist_id = request.data['artist_id']
+        
+        try:
+            # Получаем исполнителя и проверяем права доступа
+            artist = Artist.objects.get(id=artist_id)
+            
+            # Проверяем, что email исполнителя совпадает с email пользователя
+            if artist.email != request.user.email:
+                return Response({
+                    'error': 'У вас нет прав для редактирования этого исполнителя'
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            # Создаем директорию для хранения изображений исполнителей, если ее нет
+            artist_images_dir = os.path.join(settings.MEDIA_ROOT, 'artist_images')
+            if not os.path.exists(artist_images_dir):
+                os.makedirs(artist_images_dir)
+            
+            # Формируем имя файла
+            filename = f"artist_{artist.id}_{image.name}"
+            filepath = os.path.join(artist_images_dir, filename)
+            
+            # Сохраняем файл
+            with open(filepath, 'wb+') as destination:
+                for chunk in image.chunks():
+                    destination.write(chunk)
+            
+            # Обновляем ссылку на изображение у исполнителя
+            cover_image_url = f"{settings.MEDIA_URL}artist_images/{filename}"
+            artist.img_cover_url = cover_image_url
+            artist.save()
+            
+            return Response({
+                'img_cover_url': cover_image_url
+            }, status=status.HTTP_200_OK)
+        
+        except Artist.DoesNotExist:
+            return Response({
+                'error': 'Исполнитель не найден'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 

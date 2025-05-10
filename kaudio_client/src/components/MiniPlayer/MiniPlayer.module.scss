@@ -1,0 +1,74 @@
+.player {
+  position: absolute;
+  bottom: 0px;
+  z-index: 1;
+  padding: 10px;
+  width: 99%;
+  left: 0;
+  backdrop-filter: blur(5px);
+  color: $text-color;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 2px solid $audiocolor;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: max-content;
+}
+
+.controlButtons {
+  margin: 0 auto;
+  max-width: max-content;
+  margin: 0 auto;
+}
+
+.volumeControls {
+  width: 300px;
+  max-width: max-content;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.trackinfo {
+  width: 200px;
+}
+
+.timeControls {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.timeControls input[type="range"] {
+  width: 400px;
+  margin: 0 10px;
+}
+
+.timeControls input[type="range"]::-webkit-slider-runnable-track {
+  background: $audiocolor;
+  height: 5px;
+  border-radius: 20px;
+}
+
+.timeControls input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; 
+   appearance: none;
+   margin-top: -5px; 
+   margin-left: -2px;
+   background-color: #5cd5eb;
+   height: 2rem;
+   width: 1rem;    
+}
+
+
+.timeControls input[type="range"]::-moz-range-track {
+  background: $audiocolor;
+  height: 5px;
+  border-radius: 20px;
+}

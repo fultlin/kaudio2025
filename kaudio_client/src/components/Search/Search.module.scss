@@ -1,0 +1,39 @@
+.send__button {
+    color: $text-color;
+    font-size: 20px;
+    background-color: transparent;
+    border: none;
+
+    &:hover {
+        cursor: pointer;
+    }
+}
+
+.search {
+    &__icon {
+        background-color: transparent;
+        max-width: 20px;
+        max-height: 20px;
+    }
+
+    &__form{
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+        align-items: center;
+    }
+
+    &__input {
+        background-color: $text-color;
+        border-radius: 20px;
+        outline: none;
+        padding: 5px;
+        padding-left: 20px;
+        max-width: 200px;
+        border: none;
+
+        &:focus {
+            outline: 3px solid rgb(43, 255, 0);
+        }
+    }
+}

@@ -1,3 +1,5 @@
+import os
+from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import AbstractUser
@@ -154,6 +156,12 @@ class Track(models.Model):
         on_delete=models.CASCADE,
         related_name='tracks',
         verbose_name=_('Альбом')
+    )
+    audio_file = models.FileField(
+        upload_to='tracks/',
+        verbose_name=_('Аудиофайл'),
+        null=True,
+        blank=True
     )
     track_number = models.PositiveIntegerField(
         verbose_name=_('Номер трека')

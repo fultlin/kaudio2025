@@ -1,0 +1,9 @@
+.player::-webkit-media-controls-panel {
+    background-color: rgba(250, 33, 33, 0.805);
+    -webkit-backdrop-filter: blur(40px);
+    z-index: 2;
+}
+
+.player::-webkit-drop {
+    z-index: 2;
+}
