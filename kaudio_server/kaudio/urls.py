@@ -30,6 +30,10 @@ urlpatterns = [
     path('auth/token/', obtain_auth_token, name='api_token_auth'),
     path('auth/login/', views.login_view, name='api_login'),
     path('auth/register/', views.register_view, name='api_register'),
+    
+    # Получение последних загруженных треков и альбомов
+    path('recent/tracks/', views.recent_tracks, name='recent_tracks'),
+    path('recent/albums/', views.recent_albums, name='recent_albums'),
 ]
 
 # ВАЖНО: Эндпоинты для загрузки файлов определены в корневом urls.py 

@@ -21,7 +21,7 @@ from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from django.conf import settings
 from django.conf.urls.static import static
-from .upload_views import ProfileImageUploadView, ArtistImageUploadView, TrackUploadView
+from .upload_views import ProfileImageUploadView, ArtistImageUploadView, TrackUploadView, AlbumImageUploadView
 from kaudio import views as kaudio_views
 from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.permissions import IsAuthenticated
@@ -56,8 +56,9 @@ urlpatterns = [
     path('api/', include('kaudio.urls')),
     
     # Специальные эндпоинты для загрузки файлов
-    path('api/users/upload-profile-image/', ProfileImageUploadView.as_view(), name='upload-profile-image'),
-    path('api/artists/upload-cover-image/', ArtistImageUploadView.as_view(), name='upload-artist-image'),
+    path('api/upload/profile-image/', ProfileImageUploadView.as_view(), name='upload-profile-image'),
+    path('api/upload/artist-image/', ArtistImageUploadView.as_view(), name='upload-artist-image'),
+    path('api/upload/album-image/', AlbumImageUploadView.as_view(), name='upload-album-image'),
     path('api/upload/track/', TrackUploadView.as_view(), name='upload-track'),    
     # Документация API
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', 

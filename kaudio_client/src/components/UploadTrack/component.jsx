@@ -138,26 +138,6 @@ const UploadTrack = observer(() => {
     setSuccess(null);
 
     try {
-      // Сначала загружаем обложку, если она выбрана
-      let coverUrl = null;
-      if (coverImage) {
-        const coverFormData = new FormData();
-        coverFormData.append("image", coverImage);
-        coverFormData.append("artist_id", authStore.artistProfile.id);
-
-        try {
-          const coverResponse = await instance.post(
-            "artists/upload-cover-image/",
-            coverFormData
-          );
-          coverUrl = coverResponse.data.img_cover_url;
-        } catch (coverError) {
-          console.error("Ошибка при загрузке обложки:", coverError);
-          // Продолжаем без обложки
-          coverUrl = authStore.artistProfile.img_cover_url || "";
-        }
-      }
-
       // Сначала создадим альбом для одиночного трека (если трек не привязан к альбому)
       const singleTrackAlbumData = {
         title: `Сингл: ${formData.title}`,
@@ -166,7 +146,7 @@ const UploadTrack = observer(() => {
         release_date: new Date().toISOString().split("T")[0], // Сегодняшняя дата в формате YYYY-MM-DD
         total_tracks: 1,
         total_duration: formData.duration,
-        img_url: coverUrl || authStore.artistProfile.img_cover_url || "",
+        img_url: null, // Изначально null, URL добавим после загрузки обложки
       };
 
       console.log(
@@ -178,6 +158,27 @@ const UploadTrack = observer(() => {
         singleTrackAlbumData
       );
       const albumId = albumResponse.data.id;
+
+      let coverUrl = null;
+      if (coverImage) {
+        const coverFormData = new FormData();
+        coverFormData.append("image", coverImage);
+        coverFormData.append("album_id", albumId);
+
+        try {
+          const coverResponse = await instance.post(
+            "upload/album-image/",
+            coverFormData
+          );
+          coverUrl = coverResponse.data.img_url;
+        } catch (coverError) {
+          console.error("Ошибка при загрузке обложки:", coverError);
+          // Продолжаем без обложки
+          coverUrl = authStore.artistProfile.img_cover_url || "";
+        }
+      } else {
+        coverUrl = authStore.artistProfile.img_cover_url || "";
+      }
 
       // Затем загружаем трек
       const trackFormData = new FormData();
@@ -191,6 +192,8 @@ const UploadTrack = observer(() => {
       // Если есть обложка, добавляем URL
       if (coverUrl) {
         trackFormData.append("img_url", coverUrl);
+      } else {
+        trackFormData.append("img_url", ""); // Пустая строка, если обложки нет
       }
 
       // Добавляем жанры

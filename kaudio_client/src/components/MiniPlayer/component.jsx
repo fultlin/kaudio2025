@@ -89,35 +89,106 @@ export default function MiniPlayer({
   return (
     <div className={styles.player}>
       <audio id="mini-player" ref={playerRef}></audio>
-      <div className={styles.trackinfo}>
-        <p>{trackName || "....."}</p>
-        <p>{author || "....."}</p>
+
+      <div className={styles.trackInfo}>
+        {trackName ? (
+          <>
+            <div className={styles.trackName}>{trackName}</div>
+            <div className={styles.trackAuthor}>{author}</div>
+          </>
+        ) : (
+          <div className={styles.noTrack}>
+            Выберите трек для воспроизведения
+          </div>
+        )}
       </div>
 
-      <div className={styles.controls}>
-        <div className={styles.controlButtons}>
-          <button onClick={onPrev}>Previous</button>
-          <button onClick={onPlayPause}>{isPlaying ? "Pause" : "Play"}</button>
-          <button onClick={onNext}>Next</button>
-          <button onClick={skipBackward}>-10</button>
-          <button onClick={skipForward}>+10</button>
+      <div className={styles.controlsWrapper}>
+        <div className={styles.mainControls}>
+          <button
+            className={styles.controlBtn}
+            onClick={onPrev}
+            title="Предыдущий"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M19 5L9 12L19 19V5Z" fill="currentColor" />
+              <path d="M7 5H5V19H7V5Z" fill="currentColor" />
+            </svg>
+          </button>
+
+          <button
+            className={`${styles.controlBtn} ${styles.playBtn}`}
+            onClick={onPlayPause}
+            title={isPlaying ? "Пауза" : "Воспроизвести"}
+          >
+            {isPlaying ? (
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M10 4H6V20H10V4Z" fill="currentColor" />
+                <path d="M18 4H14V20H18V4Z" fill="currentColor" />
+              </svg>
+            ) : (
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M6 4L20 12L6 20V4Z" fill="currentColor" />
+              </svg>
+            )}
+          </button>
+
+          <button
+            className={styles.controlBtn}
+            onClick={onNext}
+            title="Следующий"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M5 5L15 12L5 19V5Z" fill="currentColor" />
+              <path d="M17 5H19V19H17V5Z" fill="currentColor" />
+            </svg>
+          </button>
         </div>
 
         <div className={styles.timeControls}>
-          <span>
+          <span className={styles.timeDisplay}>
             {Math.floor(currentTime / 60)}:
             {Math.floor(currentTime % 60)
               .toString()
               .padStart(2, "0")}
           </span>
-          <input
-            type="range"
-            min="0"
-            max={duration}
-            value={currentTime}
-            onChange={handleTimeChange}
-          />
-          <span>
+
+          <div className={styles.progressBar}>
+            <input
+              type="range"
+              min="0"
+              max={duration || 0}
+              value={currentTime}
+              onChange={handleTimeChange}
+              className={styles.progressInput}
+            />
+          </div>
+
+          <span className={styles.timeDisplay}>
             {Math.floor(duration / 60)}:
             {Math.floor(duration % 60)
               .toString()
@@ -127,18 +198,51 @@ export default function MiniPlayer({
       </div>
 
       <div className={styles.volumeControls}>
-        <svg
-          width="32"
-          height="30"
-          viewBox="0 0 32 30"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
+        <button
+          className={styles.controlBtn}
+          onClick={() =>
+            handleVolumeChange({ target: { value: volume === 0 ? 0.5 : 0 } })
+          }
+          title={volume === 0 ? "Включить звук" : "Выключить звук"}
         >
-          <path
-            d="M22.5734 5.12522C22.3569 5.0374 22.1194 5.00501 21.8851 5.03137C21.6509 5.05772 21.4283 5.14187 21.2401 5.27522L14.8667 10.0002H10.0001C9.64646 10.0002 9.30732 10.1319 9.05727 10.3663C8.80722 10.6008 8.66675 10.9187 8.66675 11.2502V18.7502C8.66675 19.0817 8.80722 19.3997 9.05727 19.6341C9.30732 19.8685 9.64646 20.0002 10.0001 20.0002H14.8667L21.1734 24.7252C21.408 24.9017 21.6993 24.9986 22.0001 25.0002C22.1992 25.0033 22.3961 24.9604 22.5734 24.8752C22.8003 24.7739 22.992 24.6145 23.1265 24.4155C23.261 24.2165 23.3327 23.9858 23.3334 23.7502V6.25022C23.3327 6.01462 23.261 5.78399 23.1265 5.58495C22.992 5.3859 22.8003 5.22653 22.5734 5.12522ZM20.6667 21.1502L16.1601 17.7752C15.9255 17.5988 15.6342 17.5019 15.3334 17.5002H11.3334V12.5002H15.3334C15.6342 12.4986 15.9255 12.4017 16.1601 12.2252L20.6667 8.85022V21.1502Z"
-            fill="#f7f7f7"
-          />
-        </svg>
+          {volume === 0 ? (
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M3 9H7L12 4V20L7 15H3V9Z" fill="currentColor" />
+              <path
+                d="M16.5 12L21 16.5M16.5 16.5L21 12"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+            </svg>
+          ) : (
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M3 9H7L12 4V20L7 15H3V9Z" fill="currentColor" />
+              <path
+                d="M16 9C16 9 18 10.5 18 12C18 13.5 16 15 16 15"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+              <path
+                d="M19 7C19 7 22 9 22 12C22 15 19 17 19 17"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+            </svg>
+          )}
+        </button>
+
         <input
           type="range"
           min="0"
@@ -146,6 +250,7 @@ export default function MiniPlayer({
           step="0.01"
           value={volume}
           onChange={handleVolumeChange}
+          className={styles.volumeInput}
         />
       </div>
     </div>

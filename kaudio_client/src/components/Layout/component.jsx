@@ -1,5 +1,4 @@
 import { Outlet, useNavigate } from "react-router-dom";
-import Header from "./components/Header/components";
 import styles from "./Layout.module.scss";
 import authStore from "../../stores/authStore";
 import { useEffect } from "react";
@@ -18,14 +17,11 @@ const Layout = observer(() => {
   };
 
   return (
-    <>
-      <Header auth={authStore.isAuthenticated} onLogout={handleLogout} />
+    <div className={styles.container}>
       <main className={styles.main}>
-        <div className={styles.wrapper}>
-          <Outlet />
-        </div>
+        <Outlet />
       </main>
-    </>
+    </div>
   );
 });
 

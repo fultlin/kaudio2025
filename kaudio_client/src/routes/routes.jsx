@@ -1,7 +1,7 @@
 import { createBrowserRouter } from "react-router-dom";
 import ErrorPage from "../components/ErrorPage/component";
 import Layout from "../components/Layout/component";
-import Music from "../components/Favourite/component";
+import Music from "../components/Music/component";
 import Register from "../components/Register/component";
 import LoginForm from "../components/Login/component";
 import Home from "../components/Home/component";
@@ -9,6 +9,8 @@ import UploadForm from "../components/UploadForm/component";
 import Settings from "../components/Settings/component";
 import UploadTrack from "../components/UploadTrack/component";
 import UploadAlbum from "../components/UploadAlbum/component";
+import AlbumWithPlayer from "../components/Album";
+import Playlists from "../components/Playlists/component";
 
 const router = createBrowserRouter([
   {
@@ -22,7 +24,7 @@ const router = createBrowserRouter([
       },
       {
         path: "music",
-        element: <div>music</div>,
+        element: <Music />,
       },
       {
         path: "register",
@@ -47,6 +49,14 @@ const router = createBrowserRouter([
       {
         path: "settings",
         element: <Settings />,
+      },
+      {
+        path: "album/:id",
+        element: <AlbumWithPlayer />,
+      },
+      {
+        path: "playlists",
+        element: <Playlists />,
       },
     ],
   },

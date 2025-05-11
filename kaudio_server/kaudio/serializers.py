@@ -34,6 +34,7 @@ class AlbumSerializer(serializers.ModelSerializer):
         write_only=True
     )
     genres = GenreSerializer(many=True, read_only=True)
+    img_url = serializers.URLField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = Album
@@ -58,6 +59,7 @@ class TrackSerializer(serializers.ModelSerializer):
         write_only=True
     )
     genres = GenreSerializer(many=True, read_only=True)
+    img_url = serializers.URLField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = Track
@@ -122,6 +124,14 @@ class UserActivitySerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
+    album = AlbumSerializer(read_only=True)
+    album_id = serializers.PrimaryKeyRelatedField(
+        queryset=Album.objects.all(),
+        source='album',
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
     playlist = PlaylistSerializer(read_only=True)
     playlist_id = serializers.PrimaryKeyRelatedField(
         queryset=Playlist.objects.all(),
@@ -143,7 +153,7 @@ class UserActivitySerializer(serializers.ModelSerializer):
         model = UserActivity
         fields = [
             'id', 'user', 'user_id', 'activity_type', 
-            'track', 'track_id', 'playlist', 'playlist_id',
+            'track', 'track_id', 'album', 'album_id', 'playlist', 'playlist_id',
             'artist', 'artist_id', 'duration', 'timestamp'
         ]
         read_only_fields = ['timestamp']

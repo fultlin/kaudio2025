@@ -122,6 +122,10 @@ class Album(models.Model):
         default=0,
         verbose_name=_('Общая продолжительность (сек)')
     )
+    likes_count = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_('Количество лайков')
+    )
     genres = models.ManyToManyField(
         Genre,
         through='AlbumGenre',
@@ -266,6 +270,7 @@ class UserActivity(models.Model):
     ACTIVITY_TYPES = (
         ('play', _('Воспроизведение')),
         ('like', _('Лайк')),
+        ('like_album', _('Лайк альбома')),
         ('add_to_playlist', _('Добавление в плейлист')),
         ('follow_artist', _('Подписка на исполнителя')),
     )
@@ -286,6 +291,14 @@ class UserActivity(models.Model):
         on_delete=models.SET_NULL,
         related_name='user_activities',
         verbose_name=_('Трек'),
+        null=True,
+        blank=True
+    )
+    album = models.ForeignKey(
+        Album,
+        on_delete=models.SET_NULL,
+        related_name='user_activities',
+        verbose_name=_('Альбом'),
         null=True,
         blank=True
     )

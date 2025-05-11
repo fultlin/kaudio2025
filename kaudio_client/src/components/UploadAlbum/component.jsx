@@ -179,50 +179,42 @@ const UploadAlbum = observer(() => {
     setSuccess(null);
 
     try {
-      // Получаем обложку через существующие методы (используем обложку артиста если своя не задана)
-      let coverUrl = null;
-
-      if (coverImage) {
-        try {
-          const coverFormData = new FormData();
-          coverFormData.append("image", coverImage);
-          coverFormData.append("artist_id", authStore.artistProfile.id);
-
-          const coverResponse = await instance.post(
-            "artists/upload-cover-image/",
-            coverFormData
-          );
-          coverUrl = coverResponse.data.img_cover_url;
-        } catch (coverError) {
-          console.error("Ошибка при загрузке обложки:", coverError);
-          coverUrl = authStore.artistProfile.img_cover_url || "";
-        }
-      } else {
-        coverUrl = authStore.artistProfile.img_cover_url || "";
-      }
-
-      // Создаем альбом с текущей датой релиза
-      const releaseDate = new Date().toISOString().split("T")[0]; // Формат YYYY-MM-DD
-
-      // Получаем общую длительность всех треков
-      const totalDuration = tracks.reduce(
-        (sum, track) => sum + track.duration,
-        0
-      );
-
+      // Сначала создаем альбом с временными данными, чтобы получить ID
       const albumData = {
         title: formData.title,
         description: formData.description || "",
         artist_id: authStore.artistProfile.id,
-        release_date: releaseDate,
+        release_date: new Date().toISOString().split("T")[0], // Формат YYYY-MM-DD
         total_tracks: tracks.length,
-        total_duration: totalDuration,
-        img_url: coverUrl,
+        total_duration: tracks.reduce((sum, track) => sum + track.duration, 0),
+        img_url: null, // Изначально null, URL добавим после загрузки обложки
       };
 
       console.log("Создание альбома:", albumData);
       const albumResponse = await instance.post("albums/", albumData);
       const albumId = albumResponse.data.id;
+
+      // Затем загружаем обложку, если она выбрана
+      let coverUrl = null;
+      if (coverImage) {
+        try {
+          const coverFormData = new FormData();
+          coverFormData.append("image", coverImage);
+          coverFormData.append("album_id", albumId);
+
+          const coverResponse = await instance.post(
+            "upload/album-image/",
+            coverFormData
+          );
+          coverUrl = coverResponse.data.img_url;
+        } catch (coverError) {
+          console.error("Ошибка при загрузке обложки альбома:", coverError);
+          console.log("Детали ошибки:", coverError.response?.data);
+          coverUrl = authStore.artistProfile.img_cover_url || "";
+        }
+      } else {
+        coverUrl = authStore.artistProfile.img_cover_url || "";
+      }
 
       // Загружаем треки и привязываем их к альбому
       console.log("Загрузка треков...");
@@ -235,9 +227,15 @@ const UploadAlbum = observer(() => {
         trackFormData.append("duration", track.duration);
         trackFormData.append("album_id", albumId);
         trackFormData.append("track_number", i + 1); // Номер трека в порядке следования
-        trackFormData.append("img_url", coverUrl); // Используем ту же обложку, что и у альбома
 
-        await instance.post("tracks/upload/", trackFormData);
+        // Если есть обложка, добавляем URL
+        if (coverUrl) {
+          trackFormData.append("img_url", coverUrl);
+        } else {
+          trackFormData.append("img_url", ""); // Пустая строка, если обложки нет
+        }
+
+        await instance.post("upload/track/", trackFormData);
       }
 
       setSuccess("Альбом успешно создан!");

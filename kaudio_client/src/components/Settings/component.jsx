@@ -156,15 +156,11 @@ const Settings = observer(() => {
       console.log("Файл для загрузки:", file);
 
       // Используем стандартный путь API
-      const response = await instance.post(
-        "users/upload-profile-image/",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      const response = await instance.post("upload/profile-image/", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       console.log("Ответ сервера:", response.data);
 
@@ -213,15 +209,11 @@ const Settings = observer(() => {
       console.log("Файл для загрузки обложки исполнителя:", file);
 
       // Используем стандартный путь API
-      const response = await instance.post(
-        "artists/upload-cover-image/",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      const response = await instance.post("upload/artist-image/", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       console.log("Ответ сервера:", response.data);
 

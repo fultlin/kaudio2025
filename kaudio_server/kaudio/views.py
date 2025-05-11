@@ -24,6 +24,8 @@ import os
 from django.conf import settings
 import logging
 from rest_framework.views import APIView
+from django.utils import timezone
+from django.http import FileResponse
 
 logger = logging.getLogger(__name__)
 
@@ -134,6 +136,38 @@ class AlbumViewSet(viewsets.ModelViewSet):
     search_fields = ['title', 'artist__email']
     ordering_fields = ['release_date', 'total_tracks', 'total_duration']
 
+    def create(self, request, *args, **kwargs):
+        """Создает альбом и связывает его с пользователем"""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        # Создаем альбом
+        album = serializer.save()
+        
+        # Получаем текущего пользователя
+        user = request.user
+        
+        # Связываем альбом с пользователем
+        UserAlbum.objects.create(
+            user=user,
+            album=album,
+            position=UserAlbum.objects.filter(user=user).count() + 1,
+            added_at=timezone.now()
+        )
+        
+        # Если указаны жанры, связываем их с альбомом
+        genre_ids = request.data.get('genre_ids', [])
+        if genre_ids:
+            for genre_id in genre_ids:
+                try:
+                    genre = Genre.objects.get(id=genre_id)
+                    AlbumGenre.objects.create(album=album, genre=genre)
+                except Genre.DoesNotExist:
+                    pass
+        
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
     @action(detail=True, methods=['get'])
     def tracks(self, request, pk=None):
         album = self.get_object()
@@ -148,6 +182,94 @@ class AlbumViewSet(viewsets.ModelViewSet):
         serializer = GenreSerializer(genres, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['post'])
+    def like(self, request, pk=None):
+        album = self.get_object()
+        print(f"Добавление лайка альбома {album.id} пользователем {request.user.username} (ID: {request.user.id})")
+        
+        album.likes_count += 1
+        album.save()
+
+        # Создаем запись активности для текущего пользователя
+        try:
+            user = request.user
+            # Проверяем, существует ли уже такая активность
+            existing_activity = UserActivity.objects.filter(
+                user=user,
+                activity_type='like_album',
+                album=album
+            ).first()
+            
+            if existing_activity:
+                print(f"Активность 'like_album' уже существует: ID={existing_activity.id}")
+                activity_serializer = UserActivitySerializer(existing_activity)
+                return Response({
+                    'album': self.get_serializer(album).data,
+                    'activity': activity_serializer.data,
+                    'message': 'Existing activity found'
+                })
+            
+            # Если активности нет, создаем новую
+            activity = UserActivity.objects.create(
+                user=user,
+                activity_type='like_album',
+                album=album
+            )
+            
+            # Проверяем, что альбом сохранился в активности
+            if not activity.album:
+                print(f"ВНИМАНИЕ: Альбом не сохранен в активности, исправляем...")
+                activity.album = album
+                activity.save()
+            
+            activity_serializer = UserActivitySerializer(activity)
+            
+            print(f"Активность 'like_album' создана: ID={activity.id}, связана с альбомом ID={activity.album.id if activity.album else None}")
+            
+            return Response({
+                'album': self.get_serializer(album).data,
+                'activity': activity_serializer.data
+            })
+        except Exception as e:
+            # Возвращаем только данные альбома в случае ошибки и выводим подробности ошибки
+            print(f"Ошибка при создании активности: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return Response({
+                'album': self.get_serializer(album).data,
+                'error': str(e)
+            })
+    
+    @action(detail=True, methods=['delete'])
+    def unlike(self, request, pk=None):
+        album = self.get_object()
+        print(f"Удаление лайка у альбома {album.id} пользователем {request.user.username} (ID: {request.user.id})")
+        
+        # Уменьшаем счетчик лайков, если он больше 0
+        if album.likes_count > 0:
+            album.likes_count -= 1
+            album.save()
+        
+        # Удаляем запись активности для текущего пользователя
+        try:
+            user = request.user
+            deleted, _ = UserActivity.objects.filter(
+                user=user,
+                activity_type='like_album',
+                album=album
+            ).delete()
+            
+            print(f"Удалено активностей: {deleted}")
+            
+            return Response({
+                'album': self.get_serializer(album).data,
+                'status': 'unliked'
+            })
+        except Exception as e:
+            # Возвращаем только данные альбома в случае ошибки
+            print(f"Ошибка при удалении активности: {str(e)}")
+            return Response(self.get_serializer(album).data)
+
 
 class TrackViewSet(viewsets.ModelViewSet):
     queryset = Track.objects.all()
@@ -156,56 +278,109 @@ class TrackViewSet(viewsets.ModelViewSet):
     search_fields = ['title', 'artist__email', 'album__title']
     ordering_fields = ['release_date', 'play_count', 'likes_count', 'duration']
 
+    @action(detail=True, methods=['get'])
+    def stream(self, request, pk=None):
+        """Возвращает аудиофайл для прослушивания"""
+        track = self.get_object()
+        
+        # Проверяем наличие аудиофайла
+        if not track.audio_file:
+            return Response({'error': 'Аудиофайл не найден'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Возвращаем аудиофайл для прослушивания
+        response = FileResponse(track.audio_file, content_type='audio/mpeg')
+        response['Content-Disposition'] = f'inline; filename="{track.title}.mp3"'
+        return response
+
     @action(detail=True, methods=['post'])
     def play(self, request, pk=None):
         track = self.get_object()
         track.play_count += 1
         track.save()
 
-        # Create activity if user provided
-        if 'user_id' in request.data:
-            try:
-                user = User.objects.get(pk=request.data['user_id'])
-                activity = UserActivity.objects.create(
-                    user=user,
-                    activity_type='play',
-                    track=track,
-                    duration=request.data.get('duration', track.duration)
-                )
-                activity_serializer = UserActivitySerializer(activity)
-                return Response({
-                    'track': self.get_serializer(track).data,
-                    'activity': activity_serializer.data
-                })
-            except User.DoesNotExist:
-                pass
-        
-        return Response(self.get_serializer(track).data)
+        # Создаем запись активности для текущего пользователя
+        try:
+            user = request.user
+            activity = UserActivity.objects.create(
+                user=user,
+                activity_type='play',
+                track=track,
+                duration=request.data.get('duration', track.duration)
+            )
+            activity_serializer = UserActivitySerializer(activity)
+            
+            # Обновляем счетчик прослушиваний исполнителя
+            artist = track.artist
+            artist.monthly_listeners += 1
+            artist.save()
+            
+            return Response({
+                'track': self.get_serializer(track).data,
+                'activity': activity_serializer.data
+            })
+        except Exception as e:
+            # Возвращаем только данные трека в случае ошибки
+            print(f"Ошибка при создании активности: {str(e)}")
+            return Response(self.get_serializer(track).data)
 
     @action(detail=True, methods=['post'])
     def like(self, request, pk=None):
         track = self.get_object()
+        print(f"Добавление лайка треку {track.id} пользователем {request.user.username} (ID: {request.user.id})")
+        
         track.likes_count += 1
         track.save()
 
-        # Create activity if user provided
-        if 'user_id' in request.data:
-            try:
-                user = User.objects.get(pk=request.data['user_id'])
-                activity = UserActivity.objects.create(
-                    user=user,
-                    activity_type='like',
-                    track=track
-                )
-                activity_serializer = UserActivitySerializer(activity)
-                return Response({
-                    'track': self.get_serializer(track).data,
-                    'activity': activity_serializer.data
-                })
-            except User.DoesNotExist:
-                pass
+        # Создаем запись активности для текущего пользователя
+        try:
+            user = request.user
+            activity = UserActivity.objects.create(
+                user=user,
+                activity_type='like',
+                track=track
+            )
+            activity_serializer = UserActivitySerializer(activity)
+            
+            print(f"Активность 'like' создана: ID={activity.id}")
+            
+            return Response({
+                'track': self.get_serializer(track).data,
+                'activity': activity_serializer.data
+            })
+        except Exception as e:
+            # Возвращаем только данные трека в случае ошибки
+            print(f"Ошибка при создании активности: {str(e)}")
+            return Response(self.get_serializer(track).data)
+    
+    @action(detail=True, methods=['delete'])
+    def unlike(self, request, pk=None):
+        track = self.get_object()
+        print(f"Удаление лайка у трека {track.id} пользователем {request.user.username} (ID: {request.user.id})")
         
-        return Response(self.get_serializer(track).data)
+        # Уменьшаем счетчик лайков, если он больше 0
+        if track.likes_count > 0:
+            track.likes_count -= 1
+            track.save()
+        
+        # Удаляем запись активности для текущего пользователя
+        try:
+            user = request.user
+            deleted, _ = UserActivity.objects.filter(
+                user=user,
+                activity_type='like',
+                track=track
+            ).delete()
+            
+            print(f"Удалено активностей: {deleted}")
+            
+            return Response({
+                'track': self.get_serializer(track).data,
+                'status': 'unliked'
+            })
+        except Exception as e:
+            # Возвращаем только данные трека в случае ошибки
+            print(f"Ошибка при удалении активности: {str(e)}")
+            return Response(self.get_serializer(track).data)
     
     @action(detail=True, methods=['get'])
     def genres(self, request, pk=None):
@@ -327,16 +502,28 @@ class UserActivityViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = UserActivity.objects.all()
         
-        # Filter by user_id if provided
+        print(f"UserActivityViewSet.get_queryset вызван, авторизованный пользователь: {self.request.user}")
+        
+        # Если пользователь аутентифицирован, возвращаем только его активности
+        if self.request.user.is_authenticated:
+            print(f"Фильтруем активности для пользователя {self.request.user.username} (ID: {self.request.user.id})")
+            queryset = queryset.filter(user=self.request.user)
+        else:
+            print("Пользователь не аутентифицирован")
+        
+        # Filter by user_id if provided (для администраторов)
         user_id = self.request.query_params.get('user_id', None)
         if user_id is not None:
+            print(f"Дополнительная фильтрация по user_id: {user_id}")
             queryset = queryset.filter(user__id=user_id)
         
         # Filter by activity_type if provided
         activity_type = self.request.query_params.get('activity_type', None)
         if activity_type is not None:
+            print(f"Фильтрация по activity_type: {activity_type}")
             queryset = queryset.filter(activity_type=activity_type)
         
+        print(f"Итоговое количество записей: {queryset.count()}")
         return queryset
 
 
@@ -689,4 +876,36 @@ class ArtistPhotoUploadView(APIView):
         except Exception as e:
             return Response({
                 'error': str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def recent_tracks(request):
+    """Получение последних добавленных треков"""
+    limit = request.query_params.get('limit', 10)
+    try:
+        limit = int(limit)
+    except ValueError:
+        limit = 10
+    
+    # Получаем последние добавленные треки
+    tracks = Track.objects.all().order_by('-id')[:limit]
+    serializer = TrackSerializer(tracks, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def recent_albums(request):
+    """Получение последних добавленных альбомов"""
+    limit = request.query_params.get('limit', 10)
+    try:
+        limit = int(limit)
+    except ValueError:
+        limit = 10
+    
+    # Получаем последние добавленные альбомы
+    albums = Album.objects.all().order_by('-id')[:limit]
+    serializer = AlbumSerializer(albums, many=True)
+    return Response(serializer.data) 
