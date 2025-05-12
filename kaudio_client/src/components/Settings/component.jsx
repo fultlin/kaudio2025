@@ -13,7 +13,22 @@ const Settings = observer(() => {
     img_profile_url: "",
   });
 
+  const [originalUserProfile, setOriginalUserProfile] = useState({
+    username: "",
+    email: "",
+    img_profile_url: "",
+  });
+
   const [artistProfile, setArtistProfile] = useState({
+    id: null,
+    email: "",
+    bio: "",
+    img_cover_url: "",
+    monthly_listeners: 0,
+    is_verified: false,
+  });
+
+  const [originalArtistProfile, setOriginalArtistProfile] = useState({
     id: null,
     email: "",
     bio: "",
@@ -49,11 +64,14 @@ const Settings = observer(() => {
       try {
         // Получаем данные пользователя
         const userRes = await instance.get("users/me/");
-        setUserProfile({
+        const userData = {
           username: userRes.data.username,
           email: userRes.data.email,
           img_profile_url: userRes.data.img_profile_url || "",
-        });
+        };
+
+        setUserProfile(userData);
+        setOriginalUserProfile(userData);
 
         // Проверяем, есть ли профиль исполнителя
         try {
@@ -62,21 +80,27 @@ const Settings = observer(() => {
           );
           if (artistsRes.data && artistsRes.data.length > 0) {
             const artist = artistsRes.data[0];
-            setArtistProfile({
+            const artistData = {
               id: artist.id,
               email: artist.email,
               bio: artist.bio || "",
               img_cover_url: artist.img_cover_url || "",
               monthly_listeners: artist.monthly_listeners || 0,
               is_verified: artist.is_verified || false,
-            });
+            };
+
+            setArtistProfile(artistData);
+            setOriginalArtistProfile(artistData);
             setHasArtistProfile(true);
           } else {
             // Предзаполняем email из профиля пользователя
-            setArtistProfile((prev) => ({
-              ...prev,
+            const newArtistData = {
+              ...artistProfile,
               email: userRes.data.email,
-            }));
+            };
+
+            setArtistProfile(newArtistData);
+            setOriginalArtistProfile(newArtistData);
             setHasArtistProfile(false);
           }
         } catch (err) {
@@ -146,7 +170,7 @@ const Settings = observer(() => {
 
   // Функция загрузки изображения профиля
   const uploadProfileImage = async () => {
-    if (!profileImageInputRef.current?.files?.length) return;
+    if (!profileImageInputRef.current?.files?.length) return null;
 
     const file = profileImageInputRef.current.files[0];
     const formData = new FormData();
@@ -163,20 +187,6 @@ const Settings = observer(() => {
       });
 
       console.log("Ответ сервера:", response.data);
-
-      // Обновляем URL изображения в профиле
-      setUserProfile((prev) => ({
-        ...prev,
-        img_profile_url: response.data.img_profile_url,
-      }));
-
-      // Обновляем данные пользователя в authStore
-      if (authStore.user) {
-        authStore.user = {
-          ...authStore.user,
-          img_profile_url: response.data.img_profile_url,
-        };
-      }
 
       setSuccess("Изображение профиля успешно загружено");
 
@@ -197,8 +207,14 @@ const Settings = observer(() => {
 
   // Функция загрузки изображения исполнителя
   const uploadArtistImage = async () => {
-    if (!artistImageInputRef.current?.files?.length || !artistProfile.id)
-      return;
+    if (!artistImageInputRef.current?.files?.length) return null;
+
+    // Проверяем, что ID артиста установлен
+    if (!artistProfile.id) {
+      console.error("ID артиста не определен, загрузка изображения невозможна");
+      setError("Невозможно загрузить изображение: профиль артиста не создан");
+      return null;
+    }
 
     const file = artistImageInputRef.current.files[0];
     const formData = new FormData();
@@ -207,6 +223,7 @@ const Settings = observer(() => {
 
     try {
       console.log("Файл для загрузки обложки исполнителя:", file);
+      console.log("ID артиста для загрузки:", artistProfile.id);
 
       // Используем стандартный путь API
       const response = await instance.post("upload/artist-image/", formData, {
@@ -216,12 +233,6 @@ const Settings = observer(() => {
       });
 
       console.log("Ответ сервера:", response.data);
-
-      // Обновляем URL изображения в профиле исполнителя
-      setArtistProfile((prev) => ({
-        ...prev,
-        img_cover_url: response.data.img_cover_url,
-      }));
 
       setSuccess("Изображение исполнителя успешно загружено");
 
@@ -241,6 +252,39 @@ const Settings = observer(() => {
     }
   };
 
+  // Проверяем, были ли изменены данные пользователя
+  const isUserProfileModified = () => {
+    if (!authStore.user) return false;
+
+    return (
+      userProfile.username !== originalUserProfile.username ||
+      userProfile.email !== originalUserProfile.email ||
+      profileImagePreview !== null
+    );
+  };
+
+  // Проверяем, были ли изменены данные артиста
+  const isArtistProfileModified = () => {
+    if (!hasArtistProfile) return true; // Если профиля нет, то всегда разрешаем создание
+
+    // Проверяем изменения в существующем профиле
+    return (
+      artistProfile.email !== originalArtistProfile.email ||
+      artistProfile.bio !== originalArtistProfile.bio ||
+      artistImagePreview !== null
+    );
+  };
+
+  // Проверка, изменилось ли конкретное поле пользовательского профиля
+  const isUserFieldModified = (fieldName) => {
+    return userProfile[fieldName] !== originalUserProfile[fieldName];
+  };
+
+  // Проверка, изменилось ли конкретное поле профиля артиста
+  const isArtistFieldModified = (fieldName) => {
+    return artistProfile[fieldName] !== originalArtistProfile[fieldName];
+  };
+
   // Обработчик сохранения профиля пользователя
   const handleSaveUserProfile = async (e) => {
     e.preventDefault();
@@ -250,27 +294,41 @@ const Settings = observer(() => {
 
     try {
       // Если есть новое изображение, загружаем его
+      let imageUrl = userProfile.img_profile_url;
       if (profileImagePreview) {
-        const imageUrl = await uploadProfileImage();
-        if (imageUrl) {
-          userProfile.img_profile_url = imageUrl;
+        const uploadedImage = await uploadProfileImage();
+        if (uploadedImage) {
+          imageUrl = uploadedImage;
         }
       }
 
+      // Преобразуем относительный URL в полный URL, если это необходимо
+      const fullImageUrl = imageUrl ? getFullImageUrl(imageUrl) : null;
+
+      // Обновленные данные профиля
+      const updatedUserProfile = {
+        ...userProfile,
+        img_profile_url: imageUrl, // Сохраняем оригинальный URL в состоянии
+      };
+
       // Обновляем данные профиля
       await instance.patch(`users/${authStore.user.id}/`, {
-        username: userProfile.username,
-        email: userProfile.email,
-        img_profile_url: userProfile.img_profile_url,
+        username: updatedUserProfile.username,
+        email: updatedUserProfile.email,
+        img_profile_url: fullImageUrl, // Отправляем полный URL на сервер
       });
 
       // Обновляем информацию о пользователе в authStore
       authStore.user = {
         ...authStore.user,
-        username: userProfile.username,
-        email: userProfile.email,
-        img_profile_url: userProfile.img_profile_url,
+        username: updatedUserProfile.username,
+        email: updatedUserProfile.email,
+        img_profile_url: updatedUserProfile.img_profile_url,
       };
+
+      // Обновляем локальные данные и оригинальные данные
+      setUserProfile(updatedUserProfile);
+      setOriginalUserProfile(updatedUserProfile);
 
       setSuccess("Профиль пользователя успешно обновлен");
     } catch (err) {
@@ -292,43 +350,72 @@ const Settings = observer(() => {
 
     try {
       let response;
+      // Если есть новое изображение, загружаем его
+      let imageUrl = artistProfile.img_cover_url;
+
+      if (hasArtistProfile && artistImagePreview) {
+        const uploadedImage = await uploadArtistImage();
+        if (uploadedImage) {
+          imageUrl = uploadedImage;
+        }
+      }
+
+      // Преобразуем относительный URL в полный URL, если это необходимо
+      const fullImageUrl = imageUrl ? getFullImageUrl(imageUrl) : null;
+
+      // Обновленные данные профиля
+      const updatedArtistProfile = {
+        ...artistProfile,
+        img_cover_url: imageUrl, // Сохраняем оригинальный URL в состоянии
+      };
 
       if (hasArtistProfile) {
-        // Если есть новое изображение, загружаем его
-        if (artistImagePreview) {
-          const imageUrl = await uploadArtistImage();
-          if (imageUrl) {
-            artistProfile.img_cover_url = imageUrl;
-          }
-        }
-
         // Обновляем существующий профиль
         response = await instance.patch(`artists/${artistProfile.id}/`, {
-          email: artistProfile.email,
-          bio: artistProfile.bio,
-          img_cover_url: artistProfile.img_cover_url,
+          email: updatedArtistProfile.email,
+          bio: updatedArtistProfile.bio,
+          img_cover_url: fullImageUrl, // Отправляем полный URL на сервер
         });
+
+        // Обновляем локальное состояние
+        setArtistProfile(updatedArtistProfile);
+        setOriginalArtistProfile(updatedArtistProfile);
       } else {
         // Создаем новый профиль
         response = await instance.post("artists/", {
-          email: artistProfile.email,
-          bio: artistProfile.bio,
-          img_cover_url: artistProfile.img_cover_url,
+          email: updatedArtistProfile.email,
+          bio: updatedArtistProfile.bio,
           monthly_listeners: 0,
           is_verified: false,
         });
 
         // Сохраняем ID нового исполнителя
-        setArtistProfile((prev) => ({
-          ...prev,
-          id: response.data.id,
-        }));
+        const newArtistId = response.data.id;
+        const newArtistProfile = {
+          ...updatedArtistProfile,
+          id: newArtistId,
+        };
 
+        setArtistProfile(newArtistProfile);
+        setOriginalArtistProfile(newArtistProfile);
         setHasArtistProfile(true);
 
         // Если есть новое изображение, загружаем его после создания профиля
         if (artistImagePreview) {
-          await uploadArtistImage();
+          // Ожидаем небольшую задержку перед загрузкой изображения
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          const coverUrl = await uploadArtistImage();
+
+          if (coverUrl) {
+            // Обновляем профиль с url обложки
+            const profileWithCover = {
+              ...newArtistProfile,
+              img_cover_url: coverUrl,
+            };
+
+            setArtistProfile(profileWithCover);
+            setOriginalArtistProfile(profileWithCover);
+          }
         }
       }
 
@@ -375,7 +462,9 @@ const Settings = observer(() => {
                 name="username"
                 value={userProfile.username}
                 onChange={handleUserProfileChange}
-                className={styles.input}
+                className={`${styles.input} ${
+                  isUserFieldModified("username") ? styles.modified : ""
+                }`}
                 required
                 placeholder="Введите имя пользователя"
               />
@@ -389,7 +478,9 @@ const Settings = observer(() => {
                 name="email"
                 value={userProfile.email}
                 onChange={handleUserProfileChange}
-                className={styles.input}
+                className={`${styles.input} ${
+                  isUserFieldModified("email") ? styles.modified : ""
+                }`}
                 required
                 placeholder="Введите ваш email"
               />
@@ -446,9 +537,30 @@ const Settings = observer(() => {
               </div>
             </div>
 
-            <button type="submit" className={styles.button} disabled={loading}>
-              {loading ? "Сохранение..." : "Сохранить профиль"}
+            <button
+              type="submit"
+              className={styles.button}
+              disabled={loading || !isUserProfileModified()}
+            >
+              {loading ? (
+                <span className={styles.loadingIndicator}>
+                  <span className={styles.loadingDot}></span>
+                  <span className={styles.loadingDot}></span>
+                  <span className={styles.loadingDot}></span>
+                </span>
+              ) : (
+                "Сохранить профиль"
+              )}
             </button>
+            {!isUserProfileModified() ? (
+              <p className={styles.infoText}>
+                Внесите изменения для сохранения профиля
+              </p>
+            ) : (
+              <p className={styles.modifiedText}>
+                Профиль изменен. Нажмите кнопку для сохранения.
+              </p>
+            )}
           </form>
         </section>
 
@@ -469,7 +581,9 @@ const Settings = observer(() => {
                 name="email"
                 value={artistProfile.email}
                 onChange={handleArtistProfileChange}
-                className={styles.input}
+                className={`${styles.input} ${
+                  isArtistFieldModified("email") ? styles.modified : ""
+                }`}
                 required
                 placeholder="Email для идентификации артиста"
               />
@@ -485,7 +599,9 @@ const Settings = observer(() => {
                 name="bio"
                 value={artistProfile.bio}
                 onChange={handleArtistProfileChange}
-                className={styles.textarea}
+                className={`${styles.textarea} ${
+                  isArtistFieldModified("bio") ? styles.modified : ""
+                }`}
                 rows="5"
                 placeholder="Расскажите о себе как об исполнителе..."
               />
@@ -555,13 +671,36 @@ const Settings = observer(() => {
               </div>
             )}
 
-            <button type="submit" className={styles.button} disabled={loading}>
-              {loading
-                ? "Сохранение..."
-                : hasArtistProfile
-                ? "Обновить профиль исполнителя"
-                : "Создать профиль исполнителя"}
+            <button
+              type="submit"
+              className={styles.button}
+              disabled={loading || !isArtistProfileModified()}
+            >
+              {loading ? (
+                <span className={styles.loadingIndicator}>
+                  <span className={styles.loadingDot}></span>
+                  <span className={styles.loadingDot}></span>
+                  <span className={styles.loadingDot}></span>
+                </span>
+              ) : hasArtistProfile ? (
+                "Обновить профиль исполнителя"
+              ) : (
+                "Создать профиль исполнителя"
+              )}
             </button>
+            {hasArtistProfile && !isArtistProfileModified() ? (
+              <p className={styles.infoText}>
+                Внесите изменения для обновления профиля исполнителя
+              </p>
+            ) : hasArtistProfile && isArtistProfileModified() ? (
+              <p className={styles.modifiedText}>
+                Профиль изменен. Нажмите кнопку для сохранения.
+              </p>
+            ) : (
+              <p className={styles.infoText}>
+                Создайте профиль исполнителя, чтобы загружать альбомы и треки
+              </p>
+            )}
           </form>
         </section>
       </div>

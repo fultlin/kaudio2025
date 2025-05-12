@@ -44,6 +44,20 @@ class UserViewSet(viewsets.ModelViewSet):
             permission_classes = [IsAuthenticated]
         return [permission() for permission in permission_classes]
 
+    def update(self, request, *args, **kwargs):
+        # Проверяем img_profile_url и корректируем при необходимости
+        if 'img_profile_url' in request.data and request.data['img_profile_url'] == '':
+            request.data['img_profile_url'] = None
+        
+        return super().update(request, *args, **kwargs)
+        
+    def partial_update(self, request, *args, **kwargs):
+        # Проверяем img_profile_url и корректируем при необходимости
+        if 'img_profile_url' in request.data and request.data['img_profile_url'] == '':
+            request.data['img_profile_url'] = None
+        
+        return super().partial_update(request, *args, **kwargs)
+
     @action(detail=True, methods=['get'])
     def playlists(self, request, pk=None):
         user = self.get_object()
@@ -91,6 +105,18 @@ class ArtistViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['email']
     ordering_fields = ['monthly_listeners']
+
+    def update(self, request, *args, **kwargs):
+        if 'img_cover_url' in request.data and request.data['img_cover_url'] == '':
+            request.data['img_cover_url'] = None
+        
+        return super().update(request, *args, **kwargs)
+        
+    def partial_update(self, request, *args, **kwargs):
+        if 'img_cover_url' in request.data and request.data['img_cover_url'] == '':
+            request.data['img_cover_url'] = None
+        
+        return super().partial_update(request, *args, **kwargs)
 
     @action(detail=True, methods=['get'])
     def albums(self, request, pk=None):

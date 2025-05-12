@@ -7,6 +7,8 @@ from .models import (
 
 
 class UserSerializer(serializers.ModelSerializer):
+    img_profile_url = serializers.URLField(required=False, allow_null=True, allow_blank=True)
+    
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'img_profile_url', 'role', 'last_login', 'date_joined']
@@ -14,6 +16,8 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class ArtistSerializer(serializers.ModelSerializer):
+    img_cover_url = serializers.URLField(required=False, allow_null=True, allow_blank=True)
+    
     class Meta:
         model = Artist
         fields = ['id', 'bio', 'email', 'img_cover_url', 'is_verified', 'monthly_listeners']
