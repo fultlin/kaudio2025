@@ -161,7 +161,7 @@ class TrackUploadView(APIView):
         audio_file = request.FILES.get('audio_file')
         
         # Проверяем обязательные поля
-        if not all([title, artist_id, album_id, track_number, duration, audio_file]):
+        if not all([title, artist_id, duration, audio_file]):
             print("Не все обязательные поля заполнены")
             return Response({
                 'error': 'Не все обязательные поля заполнены'
@@ -170,16 +170,24 @@ class TrackUploadView(APIView):
         try:
             # Получаем связанные объекты
             artist = get_object_or_404(Artist, id=artist_id)
-            album = get_object_or_404(Album, id=album_id)
+            album = None
             user = request.user
+            
+            # Проверяем, нужно ли привязывать трек к альбому
+            if album_id:
+                album = get_object_or_404(Album, id=album_id)
+                if not track_number:
+                    return Response({
+                        'error': 'При выборе альбома необходимо указать номер трека'
+                    }, status=status.HTTP_400_BAD_REQUEST)
             
             # Создаем трек
             track = Track.objects.create(
                 title=title,
                 artist=artist,
                 album=album,
-                track_number=track_number,
-                release_date=album.release_date,  # Берем дату выпуска из альбома
+                track_number=track_number if album else None,
+                release_date=album.release_date if album else None,  # Берем дату выпуска из альбома, если он указан
                 duration=duration,
                 audio_file=audio_file
             )
@@ -192,18 +200,26 @@ class TrackUploadView(APIView):
                     # Создаем связь трек-жанр
                     TrackGenre.objects.create(track=track, genre=genre)
                     
-                    # Создаем связь альбом-жанр, если её еще нет
-                    AlbumGenre.objects.get_or_create(album=album, genre=genre)
+                    # Создаем связь альбом-жанр, если альбом указан и связи еще нет
+                    if album:
+                        AlbumGenre.objects.get_or_create(album=album, genre=genre)
             
-            # Связываем альбом с пользователем, если еще нет связи
-            user_album, created = UserAlbum.objects.get_or_create(
-                user=user,
-                album=album,
-                defaults={
-                    'position': UserAlbum.objects.filter(user=user).count() + 1,
-                    'added_at': timezone.now()
-                }
-            )
+            # Связываем альбом с пользователем, если альбом указан и еще нет связи
+            if album:
+                user_album, created = UserAlbum.objects.get_or_create(
+                    user=user,
+                    album=album,
+                    defaults={
+                        'position': UserAlbum.objects.filter(user=user).count() + 1,
+                        'added_at': timezone.now()
+                    }
+                )
+                
+                # Обновляем статистику альбома
+                album.total_tracks = Track.objects.filter(album=album).count()
+                album.total_duration = Track.objects.filter(album=album).aggregate(
+                    total=Sum('duration'))['total'] or 0
+                album.save()
             
             # Связываем трек с пользователем
             UserTrack.objects.create(
@@ -212,12 +228,6 @@ class TrackUploadView(APIView):
                 position=UserTrack.objects.filter(user=user).count() + 1,
                 added_at=timezone.now()
             )
-            
-            # Обновляем статистику альбома
-            album.total_tracks = Track.objects.filter(album=album).count()
-            album.total_duration = Track.objects.filter(album=album).aggregate(
-                total=Sum('duration'))['total'] or 0
-            album.save()
             
             # Возвращаем данные созданного трека
             serializer = TrackSerializer(track)

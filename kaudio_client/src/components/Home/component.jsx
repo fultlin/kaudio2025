@@ -204,6 +204,14 @@ const Home = observer(() => {
               <UploadIcon />
               <span>Загрузить</span>
             </Link>
+            <Link
+              to="upload/album"
+              className={styles.uploadButton}
+              style={{ marginTop: "10px" }}
+            >
+              <span className={styles.navIcon}>💿</span>
+              <span>Загрузить альбом</span>
+            </Link>
           </div>
         </div>
 
@@ -238,9 +246,19 @@ const Home = observer(() => {
                         <div className={styles.trackInfo}>
                           <div className={styles.trackTitle}>{track.title}</div>
                           <div className={styles.trackArtist}>
-                            {track.artist?.user?.username ||
-                              track.artist?.email ||
-                              "Неизвестный исполнитель"}
+                            {track.artist ? (
+                              <Link
+                                to={`/artist/${track.artist.id}`}
+                                className={styles.artistLink}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {track.artist.user?.username ||
+                                  track.artist.email ||
+                                  "Неизвестный исполнитель"}
+                              </Link>
+                            ) : (
+                              "Неизвестный исполнитель"
+                            )}
                           </div>
                         </div>
                         <div className={styles.trackDuration}>

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { observer } from "mobx-react-lite";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import authStore from "../../stores/authStore";
 import instance from "../../axios/axios";
 import { getFullImageUrl } from "../../utils/imageUtils";
@@ -19,6 +19,7 @@ const UploadAlbum = observer(() => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [step, setStep] = useState(1); // 1 - основная информация, 2 - добавление треков
+  const [isUserArtist, setIsUserArtist] = useState(true); // Статус пользователя как артиста
 
   const [newTrack, setNewTrack] = useState({
     title: "",
@@ -32,15 +33,20 @@ const UploadAlbum = observer(() => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Проверяем авторизацию и статус исполнителя
+    // Проверяем авторизацию
     if (!authStore.isAuthenticated) {
       navigate("/auth");
       return;
     }
 
+    // Проверяем статус артиста, но не делаем перенаправление
     if (!authStore.isArtist) {
-      navigate("/settings");
-      return;
+      setIsUserArtist(false);
+      setError(
+        "Для загрузки альбома вам необходимо иметь статус артиста. Перейдите в настройки профиля, чтобы получить этот статус."
+      );
+    } else {
+      setIsUserArtist(true);
     }
   }, [navigate]);
 
@@ -279,7 +285,16 @@ const UploadAlbum = observer(() => {
       {error && <div className={styles.error}>{error}</div>}
       {success && <div className={styles.success}>{success}</div>}
 
-      {step === 1 && (
+      {!isUserArtist && (
+        <div className={styles.artistRequiredMessage}>
+          <p>Для загрузки альбома необходимо иметь статус артиста.</p>
+          <Link to="/settings" className={`${styles.button} ${styles.primary}`}>
+            Перейти в настройки профиля
+          </Link>
+        </div>
+      )}
+
+      {isUserArtist && step === 1 && (
         <form onSubmit={goToNextStep} className={styles.uploadForm}>
           <h2>Шаг 1: Информация об альбоме</h2>
 
@@ -348,7 +363,7 @@ const UploadAlbum = observer(() => {
         </form>
       )}
 
-      {step === 2 && (
+      {isUserArtist && step === 2 && (
         <div className={styles.stepContainer}>
           <h2>Шаг 2: Добавление треков</h2>
 

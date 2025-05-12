@@ -1,27 +1,28 @@
+import { useState, useEffect } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import axios from "../../axios/axios.js";
+import styles from "./styles.module.scss";
+import instance from "../../axios/axios";
 import { observer } from "mobx-react-lite";
-import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import homeStore from "stores/homeStore";
 import authStore from "../../stores/authStore";
 import MiniPlayer from "../MiniPlayer/component";
-import instance from "../../axios/axios";
 import { toJS } from "mobx";
-
-import styles from "./Music.module.scss";
 import UploadIcon from "../Home/components/UploadIcon";
 
-const Music = observer(() => {
+const Artist = observer(() => {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [src, setSrc] = useState("");
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(null);
+  const [artist, setArtist] = useState(null);
+  const [albums, setAlbums] = useState([]);
+  const [tracks, setTracks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTrackId, setActiveTrackId] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [src, setSrc] = useState("");
   const [trackName, setTrackName] = useState("");
   const [author, setAuthor] = useState("");
-  const [activeTrackId, setActiveTrackId] = useState(null);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(null);
 
-  const likedTracks = toJS(homeStore.likedTracks) || [];
-  const isLoading = homeStore.isLoading;
-  const error = homeStore.error;
   const user = authStore.user;
   const isArtist = authStore.isArtist;
 
@@ -33,34 +34,43 @@ const Music = observer(() => {
       return;
     }
 
-    console.log("Начинаем загрузку лайкнутых треков");
-    // Загружаем лайкнутые треки
-    homeStore
-      .fetchLikedTracks()
-      .then((tracks) => {
-        console.log(`Получено ${tracks.length} лайкнутых треков`);
-      })
-      .catch((error) => {
-        console.error("Ошибка при загрузке лайкнутых треков:", error);
-      });
-  }, [navigate]);
+    const fetchArtistData = async () => {
+      try {
+        setLoading(true);
+        // Получаем данные о самом артисте
+        const artistResponse = await axios.get(`/artists/${id}/`);
+        setArtist(artistResponse.data);
 
-  // Обработчик лайка/анлайка трека
-  const handleLikeTrack = async (e, trackId) => {
-    e.stopPropagation();
+        // Получаем альбомы артиста
+        const albumsResponse = await axios.get(`/artists/${id}/albums/`);
+        setAlbums(albumsResponse.data);
 
-    try {
-      console.log(`Вызываем unlike для трека с ID: ${trackId}`);
-      // Для страницы "Моя музыка" это всегда будет анлайк (удаление из избранного)
-      await homeStore.unlikeTrack(trackId);
-      console.log("Успешно удален лайк");
-    } catch (error) {
-      console.error("Ошибка при удалении из избранного:", error);
+        // Получаем треки артиста (не входящие в альбомы)
+        const tracksResponse = await axios.get(`/artists/${id}/tracks/`);
+        setTracks(tracksResponse.data);
+
+        setLoading(false);
+      } catch (error) {
+        console.error("Ошибка при загрузке данных артиста:", error);
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchArtistData();
     }
+  }, [id, navigate]);
+
+  // Проверка и исправление URL изображений
+  const fixImageUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith("http")) return url;
+
+    return `http://localhost:8000${url.startsWith("/") ? "" : "/"}${url}`;
   };
 
   // Загрузка и воспроизведение трека из API
-  const handlePlayAPITrack = async (track, index) => {
+  const handlePlayTrack = async (track, index) => {
     try {
       if (activeTrackId === track.id && isPlaying) {
         // Если тот же трек уже играет, то ставим на паузу
@@ -106,27 +116,40 @@ const Music = observer(() => {
   };
 
   const handlePrevTrack = () => {
-    if (likedTracks.length === 0 || currentTrackIndex === null) return;
+    if (tracks.length === 0 || currentTrackIndex === null) return;
 
     const newIndex =
-      currentTrackIndex > 0 ? currentTrackIndex - 1 : likedTracks.length - 1;
+      currentTrackIndex > 0 ? currentTrackIndex - 1 : tracks.length - 1;
 
-    handlePlayAPITrack(likedTracks[newIndex], newIndex);
+    handlePlayTrack(tracks[newIndex], newIndex);
   };
 
   const handleNextTrack = () => {
-    if (likedTracks.length === 0 || currentTrackIndex === null) return;
+    if (tracks.length === 0 || currentTrackIndex === null) return;
 
     const newIndex =
-      currentTrackIndex < likedTracks.length - 1 ? currentTrackIndex + 1 : 0;
+      currentTrackIndex < tracks.length - 1 ? currentTrackIndex + 1 : 0;
 
-    handlePlayAPITrack(likedTracks[newIndex], newIndex);
+    handlePlayTrack(tracks[newIndex], newIndex);
   };
 
   // Обработчик клика по профилю пользователя
   const handleProfileClick = () => {
     navigate("/settings");
   };
+
+  if (loading) {
+    return <div className={styles.loading}>Загрузка...</div>;
+  }
+
+  if (!artist) {
+    return <div className={styles.error}>Артист не найден</div>;
+  }
+
+  const artistName =
+    albums[0]?.artist?.user?.username || artist.email || "Неизвестный артист";
+  const avatarUrl = fixImageUrl(artist.img_cover_url);
+  const artistDescription = artist.description || "";
 
   return (
     <div className={styles.mainContainer}>
@@ -159,7 +182,7 @@ const Music = observer(() => {
               <span className={styles.navIcon}>🏠</span>
               <span>Главная</span>
             </Link>
-            <Link to="/music" className={styles.navLink + " " + styles.active}>
+            <Link to="/music" className={styles.navLink}>
               <span className={styles.navIcon}>🎵</span>
               <span>Моя музыка</span>
             </Link>
@@ -191,23 +214,73 @@ const Music = observer(() => {
 
         <div className={styles.contentArea}>
           <main className={styles.content}>
-            {/* Секция: Избранные треки */}
-            <section className={styles.section}>
-              <h2>Избранные треки</h2>
-              {isLoading ? (
-                <div className={styles.loading}>Загрузка...</div>
-              ) : error ? (
-                <div className={styles.error}>{error}</div>
-              ) : (
-                <div className={styles.trackList}>
-                  {likedTracks.length > 0 ? (
-                    likedTracks.map((track, index) => (
+            <div className={styles.artistPage}>
+              <div className={styles.artistHeader}>
+                <div className={styles.artistAvatar}>
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt={artistName} />
+                  ) : (
+                    <div className={styles.defaultAvatar}>{artistName[0]}</div>
+                  )}
+                </div>
+                <div className={styles.artistInfo}>
+                  <h1 className={styles.artistName}>{artistName}</h1>
+                  {artist.genres && artist.genres.length > 0 && (
+                    <div className={styles.genres}>
+                      {artist.genres.map((genre) => (
+                        <span key={genre.id || genre} className={styles.genre}>
+                          {genre.name || genre}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <p className={styles.artistDescription}>
+                    {artistDescription}
+                  </p>
+                </div>
+              </div>
+
+              {albums.length > 0 && (
+                <div className={styles.section}>
+                  <h2 className={styles.sectionTitle}>Альбомы</h2>
+                  <div className={styles.albumsGrid}>
+                    {albums.map((album) => (
+                      <Link
+                        to={`/album/${album.id}`}
+                        key={album.id}
+                        className={styles.albumCard}
+                      >
+                        <div className={styles.albumCover}>
+                          {album.cover_url ? (
+                            <img
+                              src={fixImageUrl(album.cover_url)}
+                              alt={album.title}
+                            />
+                          ) : (
+                            <div className={styles.defaultCover}></div>
+                          )}
+                        </div>
+                        <h3 className={styles.albumTitle}>{album.title}</h3>
+                        <p className={styles.albumYear}>
+                          {new Date(album.release_date).getFullYear()}
+                        </p>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {tracks.length > 0 && (
+                <div className={styles.section}>
+                  <h2 className={styles.sectionTitle}>Популярные треки</h2>
+                  <div className={styles.trackList}>
+                    {tracks.map((track, index) => (
                       <div
                         key={track.id}
-                        onClick={() => handlePlayAPITrack(track, index)}
                         className={`${styles.trackItem} ${
                           activeTrackId === track.id ? styles.activeTrack : ""
                         }`}
+                        onClick={() => handlePlayTrack(track, index)}
                       >
                         <div className={styles.trackNumber}>{index + 1}</div>
                         <div className={styles.trackPlayButton}>
@@ -219,57 +292,17 @@ const Music = observer(() => {
                         </div>
                         <div className={styles.trackInfo}>
                           <div className={styles.trackTitle}>{track.title}</div>
-                          <div className={styles.trackArtist}>
-                            {track.artist ? (
-                              <Link
-                                to={`/artist/${track.artist.id}`}
-                                className={styles.artistLink}
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {track.artist.user?.username ||
-                                  track.artist.email ||
-                                  "Неизвестный исполнитель"}
-                              </Link>
-                            ) : (
-                              "Неизвестный исполнитель"
-                            )}
-                            {track.album && (
-                              <>
-                                <span className={styles.albumSeparator}>
-                                  {" "}
-                                  ·{" "}
-                                </span>
-                                <Link
-                                  to={`/album/${track.album.id}`}
-                                  className={styles.albumLink}
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  {track.album.title}
-                                </Link>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        <div className={styles.trackDuration}>
-                          {Math.floor(track.duration / 60)}:
-                          {String(track.duration % 60).padStart(2, "0")}
-                          <div
-                            className={styles.trackLike}
-                            onClick={(e) => handleLikeTrack(e, track.id)}
-                          >
-                            <span className={styles.likedIcon}>❤️</span>
+                          <div className={styles.trackDuration}>
+                            {Math.floor(track.duration / 60)}:
+                            {(track.duration % 60).toString().padStart(2, "0")}
                           </div>
                         </div>
                       </div>
-                    ))
-                  ) : (
-                    <div className={styles.emptyState}>
-                      У вас пока нет избранных треков
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
               )}
-            </section>
+            </div>
           </main>
         </div>
       </div>
@@ -289,4 +322,4 @@ const Music = observer(() => {
   );
 });
 
-export default Music;
+export default Artist;

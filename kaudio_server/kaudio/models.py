@@ -159,7 +159,9 @@ class Track(models.Model):
         Album,
         on_delete=models.CASCADE,
         related_name='tracks',
-        verbose_name=_('Альбом')
+        verbose_name=_('Альбом'),
+        null=True,
+        blank=True
     )
     audio_file = models.FileField(
         upload_to='tracks/',
@@ -168,10 +170,14 @@ class Track(models.Model):
         blank=True
     )
     track_number = models.PositiveIntegerField(
-        verbose_name=_('Номер трека')
+        verbose_name=_('Номер трека'),
+        null=True,
+        blank=True
     )
     release_date = models.DateField(
-        verbose_name=_('Дата выпуска')
+        verbose_name=_('Дата выпуска'),
+        null=True,
+        blank=True
     )
     img_url = models.URLField(
         verbose_name=_('Ссылка на обложку'),

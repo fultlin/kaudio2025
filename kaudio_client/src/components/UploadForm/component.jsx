@@ -19,6 +19,7 @@ const UploadForm = observer(() => {
   const [albums, setAlbums] = useState([]);
   const [genres, setGenres] = useState([]);
   const [artistId, setArtistId] = useState(null);
+  const [useAlbum, setUseAlbum] = useState(false); // По умолчанию не используем альбом
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -80,6 +81,18 @@ const UploadForm = observer(() => {
       ...prev,
       [name]: value,
     }));
+  };
+
+  // Обработчик переключателя использования альбома
+  const handleUseAlbumChange = (e) => {
+    setUseAlbum(e.target.checked);
+    if (!e.target.checked) {
+      // Если снимаем галочку, сбрасываем выбранный альбом
+      setFormData((prev) => ({
+        ...prev,
+        album_id: "",
+      }));
+    }
   };
 
   // Обработчик изменения файла с автоматическим извлечением длительности
@@ -150,6 +163,12 @@ const UploadForm = observer(() => {
       return;
     }
 
+    // Проверяем, выбран ли альбом, если используем альбом
+    if (useAlbum && !formData.album_id) {
+      setError("Выберите альбом");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -161,20 +180,26 @@ const UploadForm = observer(() => {
       // Добавляем artistId автоматически
       submitData.append("artist_id", artistId);
 
-      // Добавляем остальные поля
+      // Добавляем остальные поля, кроме album_id и track_number если не используем альбом
       Object.keys(formData).forEach((key) => {
         if (key === "genre_ids" && formData[key].length > 0) {
           // Для множественных полей
           formData[key].forEach((id) => {
             submitData.append("genre_ids", id);
           });
+        } else if (
+          (key === "album_id" || key === "track_number") &&
+          !useAlbum
+        ) {
+          // Пропускаем album_id и track_number если не используем альбом
+          return;
         } else {
           submitData.append(key, formData[key]);
         }
       });
 
       // Отправляем запрос
-      const response = await instance.post("tracks/upload/", submitData, {
+      const response = await instance.post("upload/track/", submitData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -182,8 +207,8 @@ const UploadForm = observer(() => {
 
       console.log("Трек успешно загружен:", response.data);
 
-      // Перенаправляем на страницу трека
-      navigate(`/tracks/${response.data.id}`);
+      // Перенаправляем на главную страницу
+      navigate("/");
     } catch (error) {
       console.error("Ошибка при загрузке трека:", error);
       setError(error.response?.data?.error || "Ошибка при загрузке трека");
@@ -213,38 +238,63 @@ const UploadForm = observer(() => {
         </div>
 
         <div className={styles.formGroup}>
-          <label htmlFor="album_id">Альбом:</label>
-          <select
-            id="album_id"
-            name="album_id"
-            value={formData.album_id}
-            onChange={handleChange}
-            required
-            disabled={!artistId}
-            className={styles.select}
-          >
-            <option value="">Выберите альбом</option>
-            {albums.map((album) => (
-              <option key={album.id} value={album.id}>
-                {album.title}
-              </option>
-            ))}
-          </select>
+          <div className={styles.checkboxContainer}>
+            <input
+              type="checkbox"
+              id="useAlbum"
+              checked={useAlbum}
+              onChange={handleUseAlbumChange}
+              className={styles.checkbox}
+            />
+            <label htmlFor="useAlbum" className={styles.checkboxLabel}>
+              Добавить в существующий альбом
+            </label>
+          </div>
+          <small className={styles.helperText}>
+            {useAlbum
+              ? "Трек будет добавлен в выбранный альбом"
+              : "Трек будет загружен без привязки к альбому"}
+          </small>
         </div>
 
-        <div className={styles.formGroup}>
-          <label htmlFor="track_number">Номер трека в альбоме:</label>
-          <input
-            type="number"
-            id="track_number"
-            name="track_number"
-            value={formData.track_number}
-            onChange={handleChange}
-            min="1"
-            required
-            className={styles.input}
-          />
-        </div>
+        {useAlbum && (
+          <>
+            <div className={styles.formGroup}>
+              <label htmlFor="album_id">Альбом:</label>
+              <select
+                id="album_id"
+                name="album_id"
+                value={formData.album_id}
+                onChange={handleChange}
+                required={useAlbum}
+                disabled={!artistId || !useAlbum}
+                className={styles.select}
+              >
+                <option value="">Выберите альбом</option>
+                {albums.map((album) => (
+                  <option key={album.id} value={album.id}>
+                    {album.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label htmlFor="track_number">Номер трека в альбоме:</label>
+              <input
+                type="number"
+                id="track_number"
+                name="track_number"
+                value={formData.track_number}
+                onChange={handleChange}
+                min="1"
+                required={useAlbum}
+                disabled={!useAlbum}
+                className={styles.input}
+              />
+            </div>
+          </>
+        )}
 
         <div className={styles.formGroup}>
           <label htmlFor="duration">
@@ -299,7 +349,7 @@ const UploadForm = observer(() => {
 
         <button
           type="submit"
-          disabled={loading || !artistId}
+          disabled={loading || !artistId || (useAlbum && !formData.album_id)}
           className={styles.submitButton}
         >
           {loading ? "Загрузка..." : "Загрузить трек"}

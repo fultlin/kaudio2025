@@ -207,24 +207,31 @@ const Album = observer((props) => {
           <h1 className={styles.albumTitle}>{album.title}</h1>
 
           <div className={styles.albumMeta}>
-            <Link
-              to={`/artist/${album.artist?.id}`}
-              className={styles.artistLink}
-            >
-              {album.artist?.img_cover_url && (
-                <div className={styles.artistImage}>
-                  <img
-                    src={album.artist.img_cover_url}
-                    alt={album.artist.user?.username || album.artist.email}
-                  />
-                </div>
-              )}
-              <span>
-                {album.artist?.user?.username ||
-                  album.artist?.email ||
-                  "Неизвестный исполнитель"}
-              </span>
-            </Link>
+            {album.artist && (
+              <Link
+                to={`/artist/${album.artist.id}`}
+                className={styles.artistLink}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {album.artist.img_cover_url && (
+                  <div className={styles.artistImage}>
+                    <img
+                      src={album.artist.img_cover_url}
+                      alt={
+                        album.artist.user?.username ||
+                        album.artist.email ||
+                        "Неизвестный исполнитель"
+                      }
+                    />
+                  </div>
+                )}
+                <span>
+                  {album.artist.user?.username ||
+                    album.artist.email ||
+                    "Неизвестный исполнитель"}
+                </span>
+              </Link>
+            )}
 
             <span className={styles.dot}>•</span>
             <span className={styles.releaseYear}>

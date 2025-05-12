@@ -104,6 +104,14 @@ const AlbumWithPlayer = () => {
               <UploadIcon />
               <span>Загрузить</span>
             </Link>
+            <Link
+              to="/upload/album"
+              className={styles.uploadButton}
+              style={{ marginTop: "10px" }}
+            >
+              <span className={styles.navIcon}>💿</span>
+              <span>Загрузить альбом</span>
+            </Link>
           </div>
         </div>
 

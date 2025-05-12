@@ -13,6 +13,7 @@ class AuthStore {
     makeAutoObservable(this, {
       user: observable,
       isAuthenticated: observable,
+      artistProfile: observable,
       loading: observable,
       error: observable,
       login: action,
@@ -23,6 +24,7 @@ class AuthStore {
       setIsAuthenticated: action,
       setIsLoading: action,
       setError: action,
+      setArtistProfile: action,
     });
     this.checkAuth();
   }
@@ -41,6 +43,10 @@ class AuthStore {
 
   setError(error) {
     this.error = error;
+  }
+
+  setArtistProfile(artistProfile) {
+    this.artistProfile = artistProfile;
   }
 
   checkAuth = async () => {
@@ -112,6 +118,7 @@ class AuthStore {
       console.log(
         "AuthStore.checkArtistStatus: Нет данных пользователя или email"
       );
+      this.setArtistProfile(null);
       return;
     }
 
@@ -126,6 +133,9 @@ class AuthStore {
         const artist = response.data[0];
         console.log("AuthStore.checkArtistStatus: Найден артист", artist);
 
+        // Сохраняем профиль артиста
+        this.setArtistProfile(artist);
+
         // Добавляем информацию об артисте в объект пользователя
         this.setUser({
           ...this.user,
@@ -136,7 +146,10 @@ class AuthStore {
         });
       } else {
         console.log("AuthStore.checkArtistStatus: Артист не найден");
-        // Если артист не найден, просто обновляем URL изображения
+        // Если артист не найден, сбрасываем профиль артиста
+        this.setArtistProfile(null);
+
+        // Обновляем только URL изображения
         this.setUser({
           ...this.user,
           img_profile_url: this.user.img_profile_url
@@ -149,10 +162,15 @@ class AuthStore {
         "AuthStore.checkArtistStatus: Ошибка при проверке статуса артиста:",
         error
       );
+      this.setArtistProfile(null);
     }
   };
 
   get isArtist() {
+    console.log(
+      "AuthStore.isArtist: Статус артиста проверен, результат:",
+      !!this.artistProfile
+    );
     return !!this.artistProfile;
   }
 

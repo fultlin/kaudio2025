@@ -26,6 +26,33 @@
   }
 }
 
+.checkboxContainer {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.checkbox {
+  margin-right: 10px;
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}
+
+.checkboxLabel {
+  display: inline !important;
+  margin-bottom: 0 !important;
+  cursor: pointer;
+}
+
+.helperText {
+  display: block;
+  color: #aaa;
+  font-size: 0.85rem;
+  margin-top: 5px;
+  margin-left: 28px;
+}
+
 .formRow {
   display: flex;
   gap: 20px;

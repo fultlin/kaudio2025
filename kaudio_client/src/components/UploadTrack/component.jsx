@@ -20,6 +20,7 @@ const UploadTrack = observer(() => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [genres, setGenres] = useState([]);
+  const [createAlbum, setCreateAlbum] = useState(true); // По умолчанию создаем альбом для трека
 
   const audioFileInputRef = useRef(null);
   const coverImageInputRef = useRef(null);
@@ -59,6 +60,11 @@ const UploadTrack = observer(() => {
       ...prev,
       [name]: value,
     }));
+  };
+
+  // Обработчик переключателя создания альбома
+  const handleCreateAlbumChange = (e) => {
+    setCreateAlbum(e.target.checked);
   };
 
   // Обработчик изменения жанров (множественный выбор)
@@ -138,42 +144,63 @@ const UploadTrack = observer(() => {
     setSuccess(null);
 
     try {
-      // Сначала создадим альбом для одиночного трека (если трек не привязан к альбому)
-      const singleTrackAlbumData = {
-        title: `Сингл: ${formData.title}`,
-        description: "Отдельный трек",
-        artist_id: authStore.artistProfile.id,
-        release_date: new Date().toISOString().split("T")[0], // Сегодняшняя дата в формате YYYY-MM-DD
-        total_tracks: 1,
-        total_duration: formData.duration,
-        img_url: null, // Изначально null, URL добавим после загрузки обложки
-      };
-
-      console.log(
-        "Создание альбома для одиночного трека:",
-        singleTrackAlbumData
-      );
-      const albumResponse = await instance.post(
-        "albums/",
-        singleTrackAlbumData
-      );
-      const albumId = albumResponse.data.id;
-
+      let albumId = null;
       let coverUrl = null;
-      if (coverImage) {
+
+      // Создаем альбом для одиночного трека только если выбрана опция создания альбома
+      if (createAlbum) {
+        const singleTrackAlbumData = {
+          title: `Сингл: ${formData.title}`,
+          description: "Отдельный трек",
+          artist_id: authStore.artistProfile.id,
+          release_date: new Date().toISOString().split("T")[0], // Сегодняшняя дата в формате YYYY-MM-DD
+          total_tracks: 1,
+          total_duration: formData.duration,
+          img_url: null, // Изначально null, URL добавим после загрузки обложки
+        };
+
+        console.log(
+          "Создание альбома для одиночного трека:",
+          singleTrackAlbumData
+        );
+        const albumResponse = await instance.post(
+          "albums/",
+          singleTrackAlbumData
+        );
+        albumId = albumResponse.data.id;
+
+        if (coverImage) {
+          const coverFormData = new FormData();
+          coverFormData.append("image", coverImage);
+          coverFormData.append("album_id", albumId);
+
+          try {
+            const coverResponse = await instance.post(
+              "upload/album-image/",
+              coverFormData
+            );
+            coverUrl = coverResponse.data.img_url;
+          } catch (coverError) {
+            console.error("Ошибка при загрузке обложки:", coverError);
+            // Продолжаем без обложки
+            coverUrl = authStore.artistProfile.img_cover_url || "";
+          }
+        } else {
+          coverUrl = authStore.artistProfile.img_cover_url || "";
+        }
+      } else if (coverImage) {
+        // Если альбом не создаем, но обложка выбрана, загружаем ее отдельно
         const coverFormData = new FormData();
         coverFormData.append("image", coverImage);
-        coverFormData.append("album_id", albumId);
 
         try {
           const coverResponse = await instance.post(
-            "upload/album-image/",
+            "upload/track-image/",
             coverFormData
           );
           coverUrl = coverResponse.data.img_url;
         } catch (coverError) {
-          console.error("Ошибка при загрузке обложки:", coverError);
-          // Продолжаем без обложки
+          console.error("Ошибка при загрузке обложки трека:", coverError);
           coverUrl = authStore.artistProfile.img_cover_url || "";
         }
       } else {
@@ -186,8 +213,12 @@ const UploadTrack = observer(() => {
       trackFormData.append("title", formData.title);
       trackFormData.append("artist_id", authStore.artistProfile.id);
       trackFormData.append("duration", formData.duration);
-      trackFormData.append("album_id", albumId); // Привязываем к созданному альбому
-      trackFormData.append("track_number", 1); // Номер трека в альбоме
+
+      // Добавляем идентификатор альбома только если он был создан
+      if (albumId) {
+        trackFormData.append("album_id", albumId);
+        trackFormData.append("track_number", 1); // Номер трека в альбоме
+      }
 
       // Если есть обложка, добавляем URL
       if (coverUrl) {
@@ -207,7 +238,7 @@ const UploadTrack = observer(() => {
         artist_id: authStore.artistProfile.id,
         duration: formData.duration,
         album_id: albumId,
-        track_number: 1,
+        track_number: albumId ? 1 : null,
         img_url: coverUrl || "",
         genre_ids: formData.genre_ids,
       });
@@ -269,6 +300,26 @@ const UploadTrack = observer(() => {
             className={styles.input}
             placeholder="Введите название трека"
           />
+        </div>
+
+        <div className={styles.formGroup}>
+          <div className={styles.checkboxContainer}>
+            <input
+              type="checkbox"
+              id="createAlbum"
+              checked={createAlbum}
+              onChange={handleCreateAlbumChange}
+              className={styles.checkbox}
+            />
+            <label htmlFor="createAlbum" className={styles.checkboxLabel}>
+              Создать альбом для этого трека
+            </label>
+          </div>
+          <small className={styles.helperText}>
+            {createAlbum
+              ? "Трек будет добавлен в новый альбом-сингл"
+              : "Трек будет загружен без привязки к альбому"}
+          </small>
         </div>
 
         <div className={styles.formRow}>
