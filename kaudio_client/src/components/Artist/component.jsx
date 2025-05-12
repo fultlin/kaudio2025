@@ -65,7 +65,7 @@ const Artist = observer(() => {
   const fixImageUrl = (url) => {
     if (!url) return null;
     if (url.startsWith("http")) return url;
-
+    console.log('url alboma', url);
     return `http://localhost:8000${url.startsWith("/") ? "" : "/"}${url}`;
   };
 
@@ -251,9 +251,9 @@ const Artist = observer(() => {
                         className={styles.albumCard}
                       >
                         <div className={styles.albumCover}>
-                          {album.cover_url ? (
+                          {album.img_url ? (
                             <img
-                              src={fixImageUrl(album.cover_url)}
+                              src={fixImageUrl(album.img_url)}
                               alt={album.title}
                             />
                           ) : (
