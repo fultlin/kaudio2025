@@ -368,7 +368,7 @@ const Settings = observer(() => {
           <h2 className={styles.sectionTitle}>Профиль пользователя</h2>
           <form onSubmit={handleSaveUserProfile}>
             <div className={styles.formGroup}>
-              <label htmlFor="username">Имя пользователя:</label>
+              <label htmlFor="username">Имя пользователя</label>
               <input
                 type="text"
                 id="username"
@@ -377,11 +377,12 @@ const Settings = observer(() => {
                 onChange={handleUserProfileChange}
                 className={styles.input}
                 required
+                placeholder="Введите имя пользователя"
               />
             </div>
 
             <div className={styles.formGroup}>
-              <label htmlFor="email">Email:</label>
+              <label htmlFor="email">Email</label>
               <input
                 type="email"
                 id="email"
@@ -390,11 +391,12 @@ const Settings = observer(() => {
                 onChange={handleUserProfileChange}
                 className={styles.input}
                 required
+                placeholder="Введите ваш email"
               />
             </div>
 
             <div className={styles.formGroup}>
-              <label htmlFor="profileImage">Фото профиля:</label>
+              <label htmlFor="profileImage">Фото профиля</label>
               <div className={styles.imageUploadContainer}>
                 <div className={styles.imagePreviewWrapper}>
                   {profileImagePreview ? (
@@ -445,7 +447,7 @@ const Settings = observer(() => {
             </div>
 
             <button type="submit" className={styles.button} disabled={loading}>
-              {loading ? "Сохранение..." : "Сохранить профиль пользователя"}
+              {loading ? "Сохранение..." : "Сохранить профиль"}
             </button>
           </form>
         </section>
@@ -460,7 +462,7 @@ const Settings = observer(() => {
 
           <form onSubmit={handleSaveArtistProfile}>
             <div className={styles.formGroup}>
-              <label htmlFor="artist_email">Email исполнителя:</label>
+              <label htmlFor="artist_email">Email исполнителя</label>
               <input
                 type="email"
                 id="artist_email"
@@ -469,6 +471,7 @@ const Settings = observer(() => {
                 onChange={handleArtistProfileChange}
                 className={styles.input}
                 required
+                placeholder="Email для идентификации артиста"
               />
               <small>
                 Должен совпадать с email вашего аккаунта для привязки
@@ -476,7 +479,7 @@ const Settings = observer(() => {
             </div>
 
             <div className={styles.formGroup}>
-              <label htmlFor="bio">Биография:</label>
+              <label htmlFor="bio">Биография</label>
               <textarea
                 id="bio"
                 name="bio"
@@ -489,7 +492,7 @@ const Settings = observer(() => {
             </div>
 
             <div className={styles.formGroup}>
-              <label htmlFor="artistImage">Фото обложки исполнителя:</label>
+              <label htmlFor="artistImage">Фото обложки исполнителя</label>
               <div className={styles.imageUploadContainer}>
                 <div className={styles.imagePreviewWrapper}>
                   {artistImagePreview ? (
@@ -500,13 +503,13 @@ const Settings = observer(() => {
                     />
                   ) : artistProfile.img_cover_url ? (
                     <img
-                      src={`http://localhost:8000${artistProfile.img_cover_url}`}
+                      src={getFullImageUrl(artistProfile.img_cover_url)}
                       alt="Фото исполнителя"
                       className={styles.previewImg}
                     />
                   ) : (
                     <div className={styles.imagePlaceholder}>
-                      <span>A</span>
+                      <span>{getAvatarInitial(userProfile.username)}</span>
                     </div>
                   )}
                 </div>
@@ -547,11 +550,8 @@ const Settings = observer(() => {
                 </p>
                 <p className={styles.infoText}>
                   <strong>Статус верификации:</strong>{" "}
-                  {artistProfile.is_verified
-                    ? "Верифицирован"
-                    : "Не верифицирован"}
+                  {artistProfile.is_verified ? "Подтвержден" : "Не подтвержден"}
                 </p>
-                <small>Эти показатели управляются системой автоматически</small>
               </div>
             )}
 

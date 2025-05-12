@@ -1,13 +1,18 @@
+@import "../../variables.scss";
+
 .settingsContainer {
   max-width: 900px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 30px;
+  color: $text-color;
 }
 
 .title {
   text-align: center;
   margin-bottom: 30px;
-  color: #333;
+  color: $text-color;
+  font-size: 28px;
+  font-weight: 700;
 }
 
 .settingsSections {
@@ -21,18 +26,21 @@
 }
 
 .section {
-  background-color: #f8f9fa;
+  background-color: $secondary-back-color;
   padding: 25px;
   border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border: 1px solid $border-color;
 }
 
 .sectionTitle {
   margin-top: 0;
   margin-bottom: 20px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #e0e0e0;
-  color: #333;
+  border-bottom: 1px solid $border-color;
+  color: $text-color;
+  font-size: 20px;
+  font-weight: 600;
 }
 
 .formGroup {
@@ -42,12 +50,12 @@
     display: block;
     margin-bottom: 8px;
     font-weight: 500;
-    color: #333;
+    color: $text-color;
   }
 
   small {
     display: block;
-    color: #666;
+    color: $secondary-text-color;
     margin-top: 4px;
     font-size: 12px;
   }
@@ -56,15 +64,22 @@
 .input,
 .textarea {
   width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
+  padding: 12px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid $border-color;
   border-radius: 4px;
   font-size: 16px;
+  color: $text-color;
+  transition: all 0.2s;
 
   &:focus {
     outline: none;
-    border-color: #4a76a8;
-    box-shadow: 0 0 0 2px rgba(74, 118, 168, 0.2);
+    border-color: $primary-color;
+    box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.2);
+  }
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.3);
   }
 }
 
@@ -77,21 +92,25 @@
   display: block;
   width: 100%;
   padding: 12px;
-  background-color: #4a76a8;
-  color: white;
+  background-color: $primary-color;
+  color: #000;
   border: none;
-  border-radius: 4px;
+  border-radius: 30px;
   font-size: 16px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: all 0.2s;
 
   &:hover {
-    background-color: #3d5f8a;
+    background-color: lighten($primary-color, 10%);
+    transform: scale(1.02);
   }
 
   &:disabled {
-    background-color: #cccccc;
+    background-color: #333;
+    color: #666;
     cursor: not-allowed;
+    transform: none;
   }
 }
 
@@ -99,37 +118,38 @@
 .success {
   padding: 12px;
   margin-bottom: 20px;
-  border-radius: 4px;
+  border-radius: 8px;
   text-align: center;
+  font-weight: 500;
 }
 
 .error {
-  color: #dc3545;
-  background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
+  color: #ff4d4d;
+  background-color: rgba(255, 77, 77, 0.1);
+  border: 1px solid rgba(255, 77, 77, 0.3);
 }
 
 .success {
-  color: #28a745;
-  background-color: #d4edda;
-  border: 1px solid #c3e6cb;
+  color: #00e676;
+  background-color: rgba(0, 230, 118, 0.1);
+  border: 1px solid rgba(0, 230, 118, 0.3);
 }
 
 .imageUploadContainer {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 15px;
 }
 
 .imagePreviewWrapper {
   width: 100%;
   height: 200px;
-  border: 1px dashed #ddd;
-  border-radius: 4px;
+  border: 1px dashed $border-color;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f9f9f9;
+  background-color: rgba(255, 255, 255, 0.05);
   overflow: hidden;
 }
 
@@ -141,7 +161,7 @@
 
 .imageControls {
   display: flex;
-  gap: 10px;
+  gap: 15px;
 }
 
 .fileInput {
@@ -150,38 +170,41 @@
 
 .uploadButton,
 .cancelButton {
-  padding: 8px 16px;
-  border-radius: 4px;
+  padding: 10px 20px;
+  border-radius: 30px;
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
   text-align: center;
 }
 
 .uploadButton {
-  background-color: #4a76a8;
-  color: white;
+  background-color: $primary-color;
+  color: #000;
   border: none;
   flex: 1;
 
   &:hover {
-    background-color: #3d5f8a;
+    background-color: lighten($primary-color, 10%);
+    transform: scale(1.02);
   }
 }
 
 .cancelButton {
   background-color: transparent;
-  color: #dc3545;
-  border: 1px solid #dc3545;
+  color: #ff4d4d;
+  border: 1px solid #ff4d4d;
 
   &:hover {
-    background-color: rgba(220, 53, 69, 0.1);
+    background-color: rgba(255, 77, 77, 0.1);
   }
 }
 
 .infoText {
   margin: 5px 0;
-  color: #333;
+  color: $secondary-text-color;
+  font-size: 13px;
 }
 
 .imagePlaceholder {
@@ -190,8 +213,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #e9ecef;
-  color: #6c757d;
+  background-color: rgba(255, 255, 255, 0.05);
+  color: $secondary-text-color;
   font-size: 48px;
   font-weight: bold;
 
@@ -202,7 +225,7 @@
     width: 80px;
     height: 80px;
     border-radius: 50%;
-    background-color: #4a76a8;
-    color: white;
+    background-color: $primary-color;
+    color: #000;
   }
 }

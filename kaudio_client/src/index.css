@@ -129,7 +129,6 @@ table {
   flex-direction: column;
   height: 100vh;
   width: 100%;
-  overflow: hidden;
   background-color: #121212;
   color: #fff;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
@@ -141,5 +140,4 @@ body {
   height: 100%;
   width: 100%;
   background-color: #121212;
-  overflow: hidden;
 }
