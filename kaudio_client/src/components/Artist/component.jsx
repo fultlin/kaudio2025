@@ -39,7 +39,25 @@ const Artist = observer(() => {
         setLoading(true);
         // Получаем данные о самом артисте
         const artistResponse = await axios.get(`/artists/${id}/`);
-        setArtist(artistResponse.data);
+        const artist = artistResponse.data;
+
+        // Если у артиста есть email, пытаемся найти пользователя
+        if (artist.email) {
+          try {
+            const userResponse = await axios.get(
+              `/users/?email=${artist.email}`
+            );
+            if (userResponse.data && userResponse.data.length > 0) {
+              // Нашли пользователя по email
+              artist.user = userResponse.data[0];
+              console.log("Найден пользователь для артиста:", artist.user);
+            }
+          } catch (err) {
+            console.error("Ошибка при поиске пользователя для артиста:", err);
+          }
+        }
+
+        setArtist(artist);
 
         // Получаем альбомы артиста
         const albumsResponse = await axios.get(`/artists/${id}/albums/`);
@@ -65,7 +83,7 @@ const Artist = observer(() => {
   const fixImageUrl = (url) => {
     if (!url) return null;
     if (url.startsWith("http")) return url;
-    console.log('url alboma', url);
+    console.log("url alboma", url);
     return `http://localhost:8000${url.startsWith("/") ? "" : "/"}${url}`;
   };
 
@@ -146,15 +164,24 @@ const Artist = observer(() => {
     return <div className={styles.error}>Артист не найден</div>;
   }
 
+  // Получаем имя артиста, предпочитая никнейм пользователя, связанного с артистом
   const artistName =
-    albums[0]?.artist?.user?.username || artist.email || "Неизвестный артист";
+    artist.user?.username ||
+    (artist.nickname
+      ? artist.nickname
+      : artist.name
+      ? artist.name
+      : artist.display_name
+      ? artist.display_name
+      : artist.email
+      ? artist.email
+      : "Неизвестный артист");
   const avatarUrl = fixImageUrl(artist.img_cover_url);
-  const artistDescription = artist.description || "";
+  const artistDescription = artist.bio || "";
 
   return (
     <div className={styles.mainContainer}>
       <div className={styles.appContent}>
-
         <div className={styles.contentArea}>
           <main className={styles.content}>
             <div className={styles.artistPage}>
@@ -168,6 +195,24 @@ const Artist = observer(() => {
                 </div>
                 <div className={styles.artistInfo}>
                   <h1 className={styles.artistName}>{artistName}</h1>
+
+                  <div className={styles.artistStats}>
+                    {artist.is_verified && (
+                      <span
+                        className={styles.verifiedBadge}
+                        title="Верифицированный артист"
+                      >
+                        ✓
+                      </span>
+                    )}
+                    {artist.monthly_listeners > 0 && (
+                      <span className={styles.listeners}>
+                        {artist.monthly_listeners.toLocaleString()} ежемесячных
+                        слушателей
+                      </span>
+                    )}
+                  </div>
+
                   {artist.genres && artist.genres.length > 0 && (
                     <div className={styles.genres}>
                       {artist.genres.map((genre) => (
@@ -253,7 +298,7 @@ const Artist = observer(() => {
       <div className={styles.playerContainer}>
         <MiniPlayer
           trackName={trackName}
-          author={author}
+          author={artistName}
           name={src}
           isPlaying={isPlaying}
           onPlayPause={handlePlayPause}
