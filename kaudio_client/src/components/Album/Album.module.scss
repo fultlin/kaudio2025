@@ -11,7 +11,6 @@
 }
 
 .appContent {
-  display: flex;
   flex: 1;
   width: 100%;
   overflow: hidden;
@@ -197,6 +196,7 @@
   background-color: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   overflow: hidden;
+  width: 95%;
 }
 
 .trackListHeader {
