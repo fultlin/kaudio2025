@@ -28,21 +28,17 @@ class ProfileImageUploadView(APIView):
         image = request.FILES['image']
         user = request.user
         
-        # Создаем директорию для хранения изображений пользователей, если ее нет
         user_images_dir = os.path.join(settings.MEDIA_ROOT, 'profile_images')
         if not os.path.exists(user_images_dir):
             os.makedirs(user_images_dir)
         
-        # Формируем имя файла, включая имя пользователя для уникальности
         filename = f"profile_{user.id}_{image.name}"
         filepath = os.path.join(user_images_dir, filename)
         
-        # Сохраняем файл
         with open(filepath, 'wb+') as destination:
             for chunk in image.chunks():
                 destination.write(chunk)
         
-        # Обновляем ссылку на изображение у пользователя
         profile_image_url = f"{settings.MEDIA_URL}profile_images/{filename}"
         user.img_profile_url = profile_image_url
         user.save()
@@ -85,30 +81,24 @@ class ArtistImageUploadView(APIView):
         artist_id = request.data['artist_id']
         
         try:
-            # Получаем исполнителя и проверяем права доступа
             artist = Artist.objects.get(id=artist_id)
             
-            # Проверяем, что email исполнителя совпадает с email пользователя
             if artist.email != request.user.email:
                 return Response({
                     'error': 'У вас нет прав для редактирования этого исполнителя'
                 }, status=status.HTTP_403_FORBIDDEN)
             
-            # Создаем директорию для хранения изображений исполнителей, если ее нет
             artist_images_dir = os.path.join(settings.MEDIA_ROOT, 'artist_images')
             if not os.path.exists(artist_images_dir):
                 os.makedirs(artist_images_dir)
             
-            # Формируем имя файла
             filename = f"artist_{artist.id}_{image.name}"
             filepath = os.path.join(artist_images_dir, filename)
             
-            # Сохраняем файл
             with open(filepath, 'wb+') as destination:
                 for chunk in image.chunks():
                     destination.write(chunk)
             
-            # Обновляем ссылку на изображение у исполнителя
             cover_image_url = f"{settings.MEDIA_URL}artist_images/{filename}"
             artist.img_cover_url = cover_image_url
             artist.save()
@@ -151,7 +141,6 @@ class TrackUploadView(APIView):
         print(f"FILES: {request.FILES}")
         print(f"DATA: {request.data}")
         
-        # Получаем данные из запроса
         title = request.data.get('title')
         artist_id = request.data.get('artist_id')
         album_id = request.data.get('album_id')
@@ -160,7 +149,6 @@ class TrackUploadView(APIView):
         genre_ids = request.data.getlist('genre_ids') if hasattr(request.data, 'getlist') else request.data.get('genre_ids', [])
         audio_file = request.FILES.get('audio_file')
         
-        # Проверяем обязательные поля
         if not all([title, artist_id, duration, audio_file]):
             print("Не все обязательные поля заполнены")
             return Response({
@@ -168,12 +156,10 @@ class TrackUploadView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            # Получаем связанные объекты
             artist = get_object_or_404(Artist, id=artist_id)
             album = None
             user = request.user
             
-            # Проверяем, нужно ли привязывать трек к альбому
             if album_id:
                 album = get_object_or_404(Album, id=album_id)
                 if not track_number:
@@ -181,30 +167,25 @@ class TrackUploadView(APIView):
                         'error': 'При выборе альбома необходимо указать номер трека'
                     }, status=status.HTTP_400_BAD_REQUEST)
             
-            # Создаем трек
             track = Track.objects.create(
                 title=title,
                 artist=artist,
                 album=album,
                 track_number=track_number if album else None,
-                release_date=album.release_date if album else None,  # Берем дату выпуска из альбома, если он указан
+                release_date=album.release_date if album else None,
                 duration=duration,
                 audio_file=audio_file
             )
             
-            # Добавляем жанры, если они указаны
             if genre_ids:
                 for genre_id in genre_ids:
                     genre = get_object_or_404(Genre, id=genre_id)
                     
-                    # Создаем связь трек-жанр
                     TrackGenre.objects.create(track=track, genre=genre)
                     
-                    # Создаем связь альбом-жанр, если альбом указан и связи еще нет
                     if album:
                         AlbumGenre.objects.get_or_create(album=album, genre=genre)
             
-            # Связываем альбом с пользователем, если альбом указан и еще нет связи
             if album:
                 user_album, created = UserAlbum.objects.get_or_create(
                     user=user,
@@ -215,13 +196,11 @@ class TrackUploadView(APIView):
                     }
                 )
                 
-                # Обновляем статистику альбома
                 album.total_tracks = Track.objects.filter(album=album).count()
                 album.total_duration = Track.objects.filter(album=album).aggregate(
                     total=Sum('duration'))['total'] or 0
                 album.save()
             
-            # Связываем трек с пользователем
             UserTrack.objects.create(
                 user=user,
                 track=track,
@@ -229,7 +208,6 @@ class TrackUploadView(APIView):
                 added_at=timezone.now()
             )
             
-            # Возвращаем данные созданного трека
             serializer = TrackSerializer(track)
             print(f"Трек успешно создан: {track.id}")
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -273,30 +251,24 @@ class AlbumImageUploadView(APIView):
         album_id = request.data['album_id']
         
         try:
-            # Получаем альбом
             album = get_object_or_404(Album, id=album_id)
             
-            # Проверяем, что пользователь имеет права на редактирование (для этого проверяем, совпадает ли email исполнителя)
             if album.artist.email != request.user.email:
                 return Response({
                     'error': 'У вас нет прав для редактирования этого альбома'
                 }, status=status.HTTP_403_FORBIDDEN)
             
-            # Создаем директорию для хранения изображений альбомов, если ее нет
             album_images_dir = os.path.join(settings.MEDIA_ROOT, 'album_images')
             if not os.path.exists(album_images_dir):
                 os.makedirs(album_images_dir)
             
-            # Формируем имя файла
             filename = f"album_{album.id}_{image.name}"
             filepath = os.path.join(album_images_dir, filename)
             
-            # Сохраняем файл
             with open(filepath, 'wb+') as destination:
                 for chunk in image.chunks():
                     destination.write(chunk)
             
-            # Обновляем ссылку на изображение у альбома
             cover_image_url = f"{settings.MEDIA_URL}album_images/{filename}"
             album.img_url = cover_image_url
             album.save()

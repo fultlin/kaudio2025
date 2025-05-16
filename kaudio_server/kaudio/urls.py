@@ -3,7 +3,6 @@ from rest_framework.routers import DefaultRouter
 from rest_framework.authtoken.views import obtain_auth_token
 from . import views
 
-# Настройка маршрутов для REST API
 router = DefaultRouter()
 router.register(r'users', views.UserViewSet)
 router.register(r'artists', views.ArtistViewSet)
@@ -20,20 +19,14 @@ router.register(r'playlist-tracks', views.PlaylistTrackViewSet)
 router.register(r'album-genres', views.AlbumGenreViewSet)
 router.register(r'track-genres', views.TrackGenreViewSet)
 
-# Основные URL маршруты приложения kaudio
 urlpatterns = [
-    # Включаем автоматически созданные API маршруты
     path('', include(router.urls)),
     
-    # Аутентификация
     path('api-auth/', include('rest_framework.urls')),
     path('auth/token/', obtain_auth_token, name='api_token_auth'),
     path('auth/login/', views.login_view, name='api_login'),
     path('auth/register/', views.register_view, name='api_register'),
     
-    # Получение последних загруженных треков и альбомов
     path('recent/tracks/', views.recent_tracks, name='recent_tracks'),
     path('recent/albums/', views.recent_albums, name='recent_albums'),
 ]
-
-# ВАЖНО: Эндпоинты для загрузки файлов определены в корневом urls.py 

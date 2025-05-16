@@ -175,7 +175,6 @@ SWAGGER_SETTINGS = {
     'VALIDATOR_URL': None,
 }
 
-# Добавляем параметры REST Framework с указанием способа аутентификации
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
@@ -191,6 +190,5 @@ REST_FRAMEWORK = {
     ],
 }
 
-# Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

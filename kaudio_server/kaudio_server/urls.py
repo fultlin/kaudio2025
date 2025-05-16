@@ -47,20 +47,15 @@ schema_view = get_schema_view(
     permission_classes=[permissions.AllowAny],
 )
 
-# Основные URL проекта
 urlpatterns = [
-    # Административный интерфейс
     path('admin/', admin.site.urls),
     
-    # Основные API эндпоинты
     path('api/', include('kaudio.urls')),
     
-    # Специальные эндпоинты для загрузки файлов
     path('api/upload/profile-image/', ProfileImageUploadView.as_view(), name='upload-profile-image'),
     path('api/upload/artist-image/', ArtistImageUploadView.as_view(), name='upload-artist-image'),
     path('api/upload/album-image/', AlbumImageUploadView.as_view(), name='upload-album-image'),
     path('api/upload/track/', TrackUploadView.as_view(), name='upload-track'),    
-    # Документация API
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', 
             schema_view.without_ui(cache_timeout=0), 
             name='schema-json'),

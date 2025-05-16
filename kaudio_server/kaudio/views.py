@@ -45,14 +45,12 @@ class UserViewSet(viewsets.ModelViewSet):
         return [permission() for permission in permission_classes]
 
     def update(self, request, *args, **kwargs):
-        # Проверяем img_profile_url и корректируем при необходимости
         if 'img_profile_url' in request.data and request.data['img_profile_url'] == '':
             request.data['img_profile_url'] = None
         
         return super().update(request, *args, **kwargs)
         
     def partial_update(self, request, *args, **kwargs):
-        # Проверяем img_profile_url и корректируем при необходимости
         if 'img_profile_url' in request.data and request.data['img_profile_url'] == '':
             request.data['img_profile_url'] = None
         
@@ -68,7 +66,7 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def activities(self, request, pk=None):
         user = self.get_object()
-        activities = UserActivity.objects.filter(user=user)
+        activities = user.activities.all()
         serializer = UserActivitySerializer(activities, many=True)
         return Response(serializer.data)
 
@@ -167,13 +165,10 @@ class AlbumViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        # Создаем альбом
         album = serializer.save()
         
-        # Получаем текущего пользователя
         user = request.user
         
-        # Связываем альбом с пользователем
         UserAlbum.objects.create(
             user=user,
             album=album,
@@ -181,7 +176,6 @@ class AlbumViewSet(viewsets.ModelViewSet):
             added_at=timezone.now()
         )
         
-        # Если указаны жанры, связываем их с альбомом
         genre_ids = request.data.get('genre_ids', [])
         if genre_ids:
             for genre_id in genre_ids:
@@ -216,10 +210,8 @@ class AlbumViewSet(viewsets.ModelViewSet):
         album.likes_count += 1
         album.save()
 
-        # Создаем запись активности для текущего пользователя
         try:
             user = request.user
-            # Проверяем, существует ли уже такая активность
             existing_activity = UserActivity.objects.filter(
                 user=user,
                 activity_type='like_album',
@@ -235,14 +227,12 @@ class AlbumViewSet(viewsets.ModelViewSet):
                     'message': 'Existing activity found'
                 })
             
-            # Если активности нет, создаем новую
             activity = UserActivity.objects.create(
                 user=user,
                 activity_type='like_album',
                 album=album
             )
             
-            # Проверяем, что альбом сохранился в активности
             if not activity.album:
                 print(f"ВНИМАНИЕ: Альбом не сохранен в активности, исправляем...")
                 activity.album = album
@@ -257,7 +247,6 @@ class AlbumViewSet(viewsets.ModelViewSet):
                 'activity': activity_serializer.data
             })
         except Exception as e:
-            # Возвращаем только данные альбома в случае ошибки и выводим подробности ошибки
             print(f"Ошибка при создании активности: {str(e)}")
             import traceback
             traceback.print_exc()
@@ -271,12 +260,10 @@ class AlbumViewSet(viewsets.ModelViewSet):
         album = self.get_object()
         print(f"Удаление лайка у альбома {album.id} пользователем {request.user.username} (ID: {request.user.id})")
         
-        # Уменьшаем счетчик лайков, если он больше 0
         if album.likes_count > 0:
             album.likes_count -= 1
             album.save()
         
-        # Удаляем запись активности для текущего пользователя
         try:
             user = request.user
             deleted, _ = UserActivity.objects.filter(
@@ -292,7 +279,6 @@ class AlbumViewSet(viewsets.ModelViewSet):
                 'status': 'unliked'
             })
         except Exception as e:
-            # Возвращаем только данные альбома в случае ошибки
             print(f"Ошибка при удалении активности: {str(e)}")
             return Response(self.get_serializer(album).data)
 
@@ -309,11 +295,9 @@ class TrackViewSet(viewsets.ModelViewSet):
         """Возвращает аудиофайл для прослушивания"""
         track = self.get_object()
         
-        # Проверяем наличие аудиофайла
         if not track.audio_file:
             return Response({'error': 'Аудиофайл не найден'}, status=status.HTTP_404_NOT_FOUND)
         
-        # Возвращаем аудиофайл для прослушивания
         response = FileResponse(track.audio_file, content_type='audio/mpeg')
         response['Content-Disposition'] = f'inline; filename="{track.title}.mp3"'
         return response
@@ -324,7 +308,6 @@ class TrackViewSet(viewsets.ModelViewSet):
         track.play_count += 1
         track.save()
 
-        # Создаем запись активности для текущего пользователя
         try:
             user = request.user
             activity = UserActivity.objects.create(
@@ -335,7 +318,6 @@ class TrackViewSet(viewsets.ModelViewSet):
             )
             activity_serializer = UserActivitySerializer(activity)
             
-            # Обновляем счетчик прослушиваний исполнителя
             artist = track.artist
             artist.monthly_listeners += 1
             artist.save()
@@ -345,7 +327,6 @@ class TrackViewSet(viewsets.ModelViewSet):
                 'activity': activity_serializer.data
             })
         except Exception as e:
-            # Возвращаем только данные трека в случае ошибки
             print(f"Ошибка при создании активности: {str(e)}")
             return Response(self.get_serializer(track).data)
 
@@ -357,7 +338,6 @@ class TrackViewSet(viewsets.ModelViewSet):
         track.likes_count += 1
         track.save()
 
-        # Создаем запись активности для текущего пользователя
         try:
             user = request.user
             activity = UserActivity.objects.create(
@@ -374,7 +354,6 @@ class TrackViewSet(viewsets.ModelViewSet):
                 'activity': activity_serializer.data
             })
         except Exception as e:
-            # Возвращаем только данные трека в случае ошибки
             print(f"Ошибка при создании активности: {str(e)}")
             return Response(self.get_serializer(track).data)
     
@@ -383,12 +362,10 @@ class TrackViewSet(viewsets.ModelViewSet):
         track = self.get_object()
         print(f"Удаление лайка у трека {track.id} пользователем {request.user.username} (ID: {request.user.id})")
         
-        # Уменьшаем счетчик лайков, если он больше 0
         if track.likes_count > 0:
             track.likes_count -= 1
             track.save()
         
-        # Удаляем запись активности для текущего пользователя
         try:
             user = request.user
             deleted, _ = UserActivity.objects.filter(
@@ -404,7 +381,6 @@ class TrackViewSet(viewsets.ModelViewSet):
                 'status': 'unliked'
             })
         except Exception as e:
-            # Возвращаем только данные трека в случае ошибки
             print(f"Ошибка при удалении активности: {str(e)}")
             return Response(self.get_serializer(track).data)
     
@@ -426,7 +402,6 @@ class PlaylistViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = Playlist.objects.all()
         
-        # Filter out private playlists unless they belong to the requesting user
         user_id = self.request.query_params.get('user_id', None)
         if user_id is not None:
             queryset = queryset.filter(
@@ -456,23 +431,19 @@ class PlaylistViewSet(viewsets.ModelViewSet):
         except Track.DoesNotExist:
             return Response({'error': 'Track not found'}, status=404)
         
-        # Get the highest position or default to 0
         max_position = PlaylistTrack.objects.filter(playlist=playlist).order_by('-position').first()
         position = (max_position.position + 1) if max_position else 1
         
-        # Create the association
         playlist_track = PlaylistTrack.objects.create(
             playlist=playlist,
             track=track,
             position=position
         )
         
-        # Update playlist statistics
         playlist.total_tracks = PlaylistTrack.objects.filter(playlist=playlist).count()
         playlist.total_duration += track.duration
         playlist.save()
         
-        # Create activity if user provided
         if 'user_id' in request.data:
             try:
                 user = User.objects.get(pk=request.data['user_id'])
@@ -500,15 +471,12 @@ class PlaylistViewSet(viewsets.ModelViewSet):
         except (Track.DoesNotExist, PlaylistTrack.DoesNotExist):
             return Response({'error': 'Track not found in playlist'}, status=404)
         
-        # Update playlist statistics
         playlist.total_tracks -= 1
         playlist.total_duration -= track.duration
         playlist.save()
         
-        # Remove the association
         playlist_track.delete()
         
-        # Reorder positions
         position = 1
         for pt in PlaylistTrack.objects.filter(playlist=playlist).order_by('position'):
             pt.position = position
@@ -530,20 +498,17 @@ class UserActivityViewSet(viewsets.ModelViewSet):
         
         print(f"UserActivityViewSet.get_queryset вызван, авторизованный пользователь: {self.request.user}")
         
-        # Если пользователь аутентифицирован, возвращаем только его активности
         if self.request.user.is_authenticated:
             print(f"Фильтруем активности для пользователя {self.request.user.username} (ID: {self.request.user.id})")
             queryset = queryset.filter(user=self.request.user)
         else:
             print("Пользователь не аутентифицирован")
         
-        # Filter by user_id if provided (для администраторов)
         user_id = self.request.query_params.get('user_id', None)
         if user_id is not None:
             print(f"Дополнительная фильтрация по user_id: {user_id}")
             queryset = queryset.filter(user__id=user_id)
         
-        # Filter by activity_type if provided
         activity_type = self.request.query_params.get('activity_type', None)
         if activity_type is not None:
             print(f"Фильтрация по activity_type: {activity_type}")
@@ -570,7 +535,6 @@ class UserSubscribeViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = UserSubscribe.objects.all()
         
-        # Filter by user_id if provided
         user_id = self.request.query_params.get('user_id', None)
         if user_id is not None:
             queryset = queryset.filter(user__id=user_id)
@@ -588,7 +552,6 @@ class UserAlbumViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = UserAlbum.objects.all()
         
-        # Filter by user_id if provided
         user_id = self.request.query_params.get('user_id', None)
         if user_id is not None:
             queryset = queryset.filter(user__id=user_id)
@@ -606,7 +569,6 @@ class UserTrackViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = UserTrack.objects.all()
         
-        # Filter by user_id if provided
         user_id = self.request.query_params.get('user_id', None)
         if user_id is not None:
             queryset = queryset.filter(user__id=user_id)
@@ -624,7 +586,6 @@ class PlaylistTrackViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = PlaylistTrack.objects.all()
         
-        # Filter by playlist_id if provided
         playlist_id = self.request.query_params.get('playlist_id', None)
         if playlist_id is not None:
             queryset = queryset.filter(playlist__id=playlist_id)
@@ -641,12 +602,10 @@ class AlbumGenreViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = AlbumGenre.objects.all()
         
-        # Filter by album_id if provided
         album_id = self.request.query_params.get('album_id', None)
         if album_id is not None:
             queryset = queryset.filter(album__id=album_id)
         
-        # Filter by genre_id if provided
         genre_id = self.request.query_params.get('genre_id', None)
         if genre_id is not None:
             queryset = queryset.filter(genre__id=genre_id)
@@ -663,12 +622,10 @@ class TrackGenreViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = TrackGenre.objects.all()
         
-        # Filter by track_id if provided
         track_id = self.request.query_params.get('track_id', None)
         if track_id is not None:
             queryset = queryset.filter(track__id=track_id)
         
-        # Filter by genre_id if provided
         genre_id = self.request.query_params.get('genre_id', None)
         if genre_id is not None:
             queryset = queryset.filter(genre__id=genre_id)
@@ -743,7 +700,6 @@ def upload_track_view(request):
     print(f"FILES: {request.FILES}")
     print(f"DATA: {request.data}")
     
-    # Получаем данные из запроса
     title = request.data.get('title')
     artist_id = request.data.get('artist_id')
     album_id = request.data.get('album_id')
@@ -752,41 +708,35 @@ def upload_track_view(request):
     genre_ids = request.data.getlist('genre_ids')
     audio_file = request.FILES.get('audio_file')
     
-    # Проверяем обязательные поля
     if not all([title, artist_id, album_id, track_number, duration, audio_file]):
         return Response({
             'error': 'Не все обязательные поля заполнены'
         }, status=status.HTTP_400_BAD_REQUEST)
     
     try:
-        # Получаем связанные объекты
         artist = get_object_or_404(Artist, id=artist_id)
         album = get_object_or_404(Album, id=album_id)
         
-        # Создаем трек
         track = Track.objects.create(
             title=title,
             artist=artist,
             album=album,
             track_number=track_number,
-            release_date=album.release_date,  # Берем дату выпуска из альбома
+            release_date=album.release_date,
             duration=duration,
             audio_file=audio_file
         )
         
-        # Добавляем жанры, если они указаны
         if genre_ids:
             for genre_id in genre_ids:
                 genre = get_object_or_404(Genre, id=genre_id)
                 TrackGenre.objects.create(track=track, genre=genre)
         
-        # Обновляем статистику альбома
         album.total_tracks = Track.objects.filter(album=album).count()
         album.total_duration = Track.objects.filter(album=album).aggregate(
             total=Sum('duration'))['total'] or 0
         album.save()
         
-        # Возвращаем данные созданного трека
         serializer = TrackSerializer(track)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
         
@@ -814,21 +764,17 @@ class ProfilePhotoUploadView(APIView):
         image = request.FILES['image']
         user = request.user
         
-        # Создаем директорию для хранения изображений пользователей, если ее нет
         user_images_dir = os.path.join(settings.MEDIA_ROOT, 'profile_images')
         if not os.path.exists(user_images_dir):
             os.makedirs(user_images_dir)
         
-        # Формируем имя файла, включая имя пользователя для уникальности
         filename = f"profile_{user.id}_{image.name}"
         filepath = os.path.join(user_images_dir, filename)
         
-        # Сохраняем файл
         with open(filepath, 'wb+') as destination:
             for chunk in image.chunks():
                 destination.write(chunk)
         
-        # Обновляем ссылку на изображение у пользователя
         profile_image_url = f"{settings.MEDIA_URL}profile_images/{filename}"
         user.img_profile_url = profile_image_url
         user.save()
@@ -862,30 +808,24 @@ class ArtistPhotoUploadView(APIView):
         artist_id = request.data['artist_id']
         
         try:
-            # Получаем исполнителя и проверяем права доступа
             artist = Artist.objects.get(id=artist_id)
             
-            # Проверяем, что email исполнителя совпадает с email пользователя
             if artist.email != request.user.email:
                 return Response({
                     'error': 'У вас нет прав для редактирования этого исполнителя'
                 }, status=status.HTTP_403_FORBIDDEN)
             
-            # Создаем директорию для хранения изображений исполнителей, если ее нет
             artist_images_dir = os.path.join(settings.MEDIA_ROOT, 'artist_images')
             if not os.path.exists(artist_images_dir):
                 os.makedirs(artist_images_dir)
             
-            # Формируем имя файла
             filename = f"artist_{artist.id}_{image.name}"
             filepath = os.path.join(artist_images_dir, filename)
             
-            # Сохраняем файл
             with open(filepath, 'wb+') as destination:
                 for chunk in image.chunks():
                     destination.write(chunk)
             
-            # Обновляем ссылку на изображение у исполнителя
             cover_image_url = f"{settings.MEDIA_URL}artist_images/{filename}"
             artist.img_cover_url = cover_image_url
             artist.save()
@@ -915,7 +855,6 @@ def recent_tracks(request):
     except ValueError:
         limit = 10
     
-    # Получаем последние добавленные треки
     tracks = Track.objects.all().order_by('-id')[:limit]
     serializer = TrackSerializer(tracks, many=True)
     return Response(serializer.data)
@@ -931,7 +870,6 @@ def recent_albums(request):
     except ValueError:
         limit = 10
     
-    # Получаем последние добавленные альбомы
     albums = Album.objects.all().order_by('-id')[:limit]
     serializer = AlbumSerializer(albums, many=True)
     return Response(serializer.data) 
