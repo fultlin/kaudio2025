@@ -184,7 +184,9 @@ class TrackAdmin(admin.ModelAdmin):
     
     @admin.display(description=_('Альбом'), ordering='album__title')
     def get_album(self, obj):
-        return obj.album.title
+        if obj.album:
+            return obj.album.title
+        return _('Нет альбома')
     
     @admin.display(description=_('Продолжительность'), ordering='duration')
     def duration_display(self, obj):
