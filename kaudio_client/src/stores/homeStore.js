@@ -245,7 +245,7 @@ class HomeStore {
       await this.setRecentTracks(tracksResponse.data);
 
       // Получаем последние альбомы
-      const albumsResponse = await instance.get("recent/albums/");
+      const albumsResponse = await instance.get("recent/albums/?exclude_empty=true");
       await this.setRecentAlbums(albumsResponse.data);
     } catch (error) {
       console.error("Ошибка при получении данных:", error);

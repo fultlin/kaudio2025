@@ -410,6 +410,10 @@ class PlaylistViewSet(viewsets.ModelViewSet):
         else:
             queryset = queryset.filter(is_public=True)
         
+        exclude_empty = self.request.query_params.get('exclude_empty', False)
+        if exclude_empty and str(exclude_empty).lower() == 'true':
+            queryset = queryset.exclude(total_tracks=0)
+        
         return queryset
 
     @action(detail=True, methods=['get'])
