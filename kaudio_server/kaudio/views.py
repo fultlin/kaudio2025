@@ -504,9 +504,10 @@ class UserActivityViewSet(viewsets.ModelViewSet):
         
         if self.request.user.is_authenticated:
             print(f"Фильтруем активности для пользователя {self.request.user.username} (ID: {self.request.user.id})")
-            queryset = queryset.filter(user=self.request.user)
+            queryset = UserActivity.objects.get_user_activities(self.request.user)
         else:
             print("Пользователь не аутентифицирован")
+            return UserActivity.objects.none()
         
         user_id = self.request.query_params.get('user_id', None)
         if user_id is not None:
@@ -516,7 +517,11 @@ class UserActivityViewSet(viewsets.ModelViewSet):
         activity_type = self.request.query_params.get('activity_type', None)
         if activity_type is not None:
             print(f"Фильтрация по activity_type: {activity_type}")
-            queryset = queryset.filter(activity_type=activity_type)
+            
+            if activity_type == 'like':
+                queryset = UserActivity.objects.get_liked_tracks(self.request.user)
+            else:
+                queryset = queryset.filter(activity_type=activity_type)
         
         print(f"Итоговое количество записей: {queryset.count()}")
         return queryset

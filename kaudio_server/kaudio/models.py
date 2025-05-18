@@ -5,6 +5,8 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator
 
+from kaudio_server.kaudio.managers import UserActivityManager
+
 class User(AbstractUser):
     """Модель пользователя"""
     
@@ -333,6 +335,8 @@ class UserActivity(models.Model):
         auto_now_add=True,
         verbose_name=_('Время')
     )
+    
+    objects = UserActivityManager()
     
     class Meta:
         verbose_name = _('Активность пользователя')

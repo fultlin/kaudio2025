@@ -245,7 +245,9 @@ class HomeStore {
       await this.setRecentTracks(tracksResponse.data);
 
       // Получаем последние альбомы
-      const albumsResponse = await instance.get("recent/albums/?exclude_empty=true");
+      const albumsResponse = await instance.get(
+        "recent/albums/?exclude_empty=true"
+      );
       await this.setRecentAlbums(albumsResponse.data);
     } catch (error) {
       console.error("Ошибка при получении данных:", error);
@@ -260,7 +262,7 @@ class HomeStore {
     this.setError(null);
 
     try {
-      // Получаем лайкнутые треки текущего пользователя через API активностей
+
       const response = await instance.get(
         "user-activities/?activity_type=like"
       );
