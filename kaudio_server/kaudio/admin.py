@@ -164,19 +164,30 @@ class TrackAdmin(admin.ModelAdmin):
     search_fields = ['title', 'artist__email', 'album__title']
     date_hierarchy = 'release_date'
     raw_id_fields = ['artist', 'album']
-    readonly_fields = ['play_count', 'likes_count']
-    fieldsets = (
-        (_('Основная информация'), {
-            'fields': ('title', 'artist', 'album', 'track_number', 'release_date')
-        }),
-        (_('Медиа'), {
-            'fields': ('img_url', 'duration', 'is_explicit', 'lyrics')
-        }),
-        (_('Статистика'), {
-            'fields': ('play_count', 'likes_count')
-        }),
-    )
-    inlines = [TrackGenreInline]
+    readonly_fields = ['play_count', 'likes_count', 'get_popularity_score']
+    
+    def get_popularity_score(self, obj):
+        """Показывает рейтинг популярности трека"""
+        tracks = Track.objects.get_tracks_with_popularity().filter(id=obj.id)
+        if tracks:
+            return f"{tracks[0].popularity_score:.2f}"
+        return "0.00"
+    get_popularity_score.short_description = _('Рейтинг популярности')
+
+    def changelist_view(self, request, extra_context=None):
+        """Добавляет статистику на страницу списка треков"""
+        extra_context = extra_context or {}
+        
+        # Получаем статистику по жанрам
+        genre_stats = Track.objects.get_genre_statistics()
+        
+        # Получаем топ-5 исполнителей
+        top_artists = Track.objects.get_top_artists_by_duration(limit=5)
+        
+        extra_context['genre_statistics'] = genre_stats
+        extra_context['top_artists'] = top_artists
+        
+        return super().changelist_view(request, extra_context=extra_context)
     
     @admin.display(description=_('Исполнитель'), ordering='artist__email')
     def get_artist(self, obj):

@@ -1,0 +1,215 @@
+.statistics {
+  .section {
+    margin-bottom: 40px;
+    background: $secondary-back-color;
+    border-radius: 12px;
+    padding: 20px;
+
+    .sectionHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+
+      h2 {
+        font-size: 24px;
+        color: $text-color;
+      }
+
+      .count {
+        color: $secondary-text-color;
+        font-size: 16px;
+      }
+
+      .refreshButton {
+        padding: 8px 16px;
+        background: $secondary-back-color;
+        border: none;
+        border-radius: 6px;
+        color: white;
+        cursor: pointer;
+        transition: background 0.2s;
+
+        &:hover {
+          background: darken($accent-color, 10%);
+        }
+      }
+    }
+  }
+
+  .genreGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+
+    .genreCard {
+      background: rgba($primary-back-color, 0.5);
+      padding: 20px;
+      border-radius: 8px;
+      transition: transform 0.2s;
+
+      &:hover {
+        transform: translateY(-2px);
+      }
+
+      h3 {
+        margin-bottom: 15px;
+        color: $text-color;
+        font-size: 18px;
+      }
+    }
+  }
+
+  .tracksList {
+    .trackCard {
+      display: flex;
+      align-items: center;
+      background: rgba($primary-back-color, 0.5);
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      transition: transform 0.2s;
+
+      &:hover {
+        transform: translateX(5px);
+      }
+
+      .trackRank {
+        font-size: 24px;
+        font-weight: bold;
+        margin-right: 20px;
+        color: $accent-color;
+        min-width: 30px;
+      }
+
+      .trackInfo {
+        flex: 1;
+
+        h3 {
+          margin: 0;
+          color: $text-color;
+          font-size: 18px;
+        }
+
+        p {
+          color: $secondary-text-color;
+          margin: 5px 0;
+        }
+      }
+
+      .trackStats {
+        text-align: right;
+      }
+    }
+  }
+
+  .artistsList {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+
+    .artistCard {
+      background: rgba($primary-back-color, 0.5);
+      padding: 20px;
+      border-radius: 8px;
+      position: relative;
+      transition: transform 0.2s;
+
+      &:hover {
+        transform: translateY(-2px);
+      }
+
+      .artistRank {
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        background: $accent-color;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-weight: bold;
+      }
+
+      h3 {
+        margin-bottom: 15px;
+        color: $text-color;
+        font-size: 18px;
+      }
+    }
+  }
+
+  .statItem {
+    display: flex;
+    justify-content: space-between;
+    margin: 8px 0;
+
+    .label {
+      color: $secondary-text-color;
+    }
+
+    .value {
+      color: $text-color;
+      font-weight: 500;
+    }
+  }
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba($accent-color, 0.1);
+    border-left-color: $accent-color;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+  }
+
+  p {
+    color: $secondary-text-color;
+  }
+}
+
+.error {
+  text-align: center;
+  padding: 40px;
+  background: rgba($error-color, 0.1);
+  border-radius: 12px;
+  margin: 20px 0;
+
+  h3 {
+    color: $error-color;
+    margin-bottom: 10px;
+  }
+
+  p {
+    color: $secondary-text-color;
+    margin-bottom: 20px;
+  }
+
+  .retryButton {
+    padding: 10px 20px;
+    background: $error-color;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover {
+      background: darken($error-color, 10%);
+    }
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

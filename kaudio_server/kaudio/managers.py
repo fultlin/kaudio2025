@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from django.db.models import Count, Sum, F, FloatField, ExpressionWrapper, Q, Avg
 
 class UserActivityManager(models.Manager):
     def get_user_activities(self, user, activity_type=None):
@@ -28,3 +29,51 @@ class UserActivityManager(models.Manager):
             user=user,
             activity_type='like'
         ).filter(track__isnull=False)
+
+
+class TrackManager(models.Manager):
+    def get_genre_statistics(self):
+        """
+        Получает статистику по трекам для каждого жанра:
+        - Количество треков
+        - Общая длительность
+        - Среднее количество прослушиваний
+        - Среднее количество лайков
+        """
+        return self.values('genres__title').annotate(
+            tracks_count=Count('id'),
+            total_duration=Sum('duration'),
+            avg_play_count=Avg('play_count'),
+            avg_likes=Avg('likes_count')
+        ).order_by('-tracks_count')
+
+    def get_tracks_with_popularity(self):
+        """
+        Аннотирует треки показателем популярности на основе:
+        - Количества прослушиваний (вес 0.6)
+        - Количества лайков (вес 0.4)
+        """
+        return self.annotate(
+            popularity_score=ExpressionWrapper(
+                (F('play_count') * 0.6 + F('likes_count') * 0.4),
+                output_field=FloatField()
+            )
+        ).order_by('-popularity_score')
+
+    def get_top_artists_by_duration(self, limit=10):
+        """
+        Получает топ исполнителей по общей длительности треков
+        с дополнительной статистикой:
+        - Общее количество треков
+        - Средняя длительность трека
+        - Общее количество прослушиваний
+        """
+        return self.values('artist__email').annotate(
+            total_tracks=Count('id'),
+            total_duration=Sum('duration'),
+            avg_track_duration=ExpressionWrapper(
+                Sum('duration') * 1.0 / Count('id'),
+                output_field=FloatField()
+            ),
+            total_plays=Sum('play_count')
+        ).order_by('-total_duration')[:limit]

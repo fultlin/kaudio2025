@@ -391,6 +391,49 @@ class TrackViewSet(viewsets.ModelViewSet):
         serializer = GenreSerializer(genres, many=True)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['get'])
+    def genre_statistics(self, request):
+        """
+        Получение статистики по жанрам
+        """
+        statistics = Track.objects.get_genre_statistics()
+        return Response({
+            'genre_statistics': list(statistics),
+            'total_genres': len(statistics)
+        })
+
+    @action(detail=False, methods=['get'])
+    def popular_tracks(self, request):
+        """
+        Получение популярных треков с рассчитанным рейтингом
+        """
+        limit = int(request.query_params.get('limit', 10))
+        tracks = Track.objects.get_tracks_with_popularity()[:limit]
+        
+        data = []
+        for track in tracks:
+            track_data = self.get_serializer(track).data
+            track_data['popularity_score'] = track.popularity_score
+            data.append(track_data)
+            
+        return Response({
+            'popular_tracks': data,
+            'total_tracks': len(data)
+        })
+
+    @action(detail=False, methods=['get'])
+    def top_artists(self, request):
+        """
+        Получение топ исполнителей по длительности контента
+        """
+        limit = int(request.query_params.get('limit', 10))
+        artists = Track.objects.get_top_artists_by_duration(limit=limit)
+        
+        return Response({
+            'top_artists': list(artists),
+            'total_artists': len(artists)
+        })
+
 
 class PlaylistViewSet(viewsets.ModelViewSet):
     queryset = Playlist.objects.all()

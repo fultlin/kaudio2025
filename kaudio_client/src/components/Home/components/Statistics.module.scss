@@ -1,0 +1,108 @@
+.statistics {
+  padding: 20px;
+
+  .section {
+    margin-bottom: 40px;
+
+    h2 {
+      margin-bottom: 20px;
+      color: $text-color;
+      font-size: 24px;
+    }
+  }
+
+  .genreGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+
+    .genreCard {
+      background: $secondary-back-color;
+      padding: 20px;
+      border-radius: 8px;
+
+      h3 {
+        margin-bottom: 10px;
+        color: $text-color;
+      }
+
+      p {
+        color: $secondary-text-color;
+        margin: 5px 0;
+      }
+    }
+  }
+
+  .tracksList {
+    .trackCard {
+      display: flex;
+      align-items: center;
+      background: $secondary-back-color;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+
+      .trackRank {
+        font-size: 24px;
+        font-weight: bold;
+        margin-right: 20px;
+        color: $accent-color;
+        min-width: 30px;
+      }
+
+      .trackInfo {
+        flex: 1;
+
+        h3 {
+          margin: 0;
+          color: $text-color;
+        }
+
+        p {
+          color: $secondary-text-color;
+          margin: 5px 0;
+        }
+      }
+
+      .trackStats {
+        text-align: right;
+
+        p {
+          color: $secondary-text-color;
+          margin: 5px 0;
+        }
+      }
+    }
+  }
+
+  .artistsList {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+
+    .artistCard {
+      background: $secondary-back-color;
+      padding: 20px;
+      border-radius: 8px;
+
+      h3 {
+        margin-bottom: 15px;
+        color: $text-color;
+      }
+
+      p {
+        color: $secondary-text-color;
+        margin: 8px 0;
+      }
+    }
+  }
+}
+
+.error {
+  color: $error-color;
+  text-align: center;
+  padding: 20px;
+  background: rgba($error-color, 0.1);
+  border-radius: 8px;
+  margin: 20px;
+}

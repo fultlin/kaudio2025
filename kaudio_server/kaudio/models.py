@@ -5,7 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator
 
-from kaudio_server.kaudio.managers import UserActivityManager
+from .managers import UserActivityManager, TrackManager
 
 class User(AbstractUser):
     """Модель пользователя"""
@@ -212,6 +212,8 @@ class Track(models.Model):
         related_name='tracks',
         verbose_name=_('Жанры')
     )
+    
+    objects = TrackManager()
     
     class Meta:
         verbose_name = _('Трек')

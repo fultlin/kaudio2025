@@ -51,6 +51,10 @@ const Sidebar = observer(() => {
           <span className={styles.navIcon}>📑</span>
           <span>Плейлисты</span>
         </Link>
+        <Link to="/statistics" className={styles.navLink}>
+          <span className={styles.navIcon}>📊</span>
+          <span>Статистика</span>
+        </Link>
         <Link to="/settings" className={styles.navLink}>
           <span className={styles.navIcon}>⚙️</span>
           <span>Настройки</span>

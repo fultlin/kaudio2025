@@ -12,6 +12,7 @@ import UploadAlbum from "../components/UploadAlbum/component";
 import AlbumWithPlayer from "../components/Album";
 import Playlists from "../components/Playlists/component";
 import Artist from "../components/Artist/component";
+import StatisticsPage from "../components/Statistics";
 
 const router = createBrowserRouter([
   {
@@ -62,6 +63,10 @@ const router = createBrowserRouter([
       {
         path: "artist/:id",
         element: <Artist />,
+      },
+      {
+        path: "statistics",
+        element: <StatisticsPage />,
       },
     ],
   },
