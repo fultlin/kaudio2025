@@ -208,7 +208,9 @@ const UploadForm = observer(() => {
       console.log("Трек успешно загружен:", response.data);
 
       // Перенаправляем на главную страницу
-      navigate("/");
+      navigate("/", {
+        state: { message: "Трек успешно загружен" },
+      });
     } catch (error) {
       console.error("Ошибка при загрузке трека:", error);
       setError(error.response?.data?.error || "Ошибка при загрузке трека");

@@ -331,6 +331,10 @@ const Settings = observer(() => {
       setOriginalUserProfile(updatedUserProfile);
 
       setSuccess("Профиль пользователя успешно обновлен");
+
+      setTimeout(() => {
+        navigate("/");
+      }, 1500);
     } catch (err) {
       console.error("Ошибка при обновлении профиля пользователя:", err);
       setError(

@@ -5,6 +5,9 @@ from .models import (
     Subscribe, UserSubscribe, UserAlbum, UserTrack, PlaylistTrack,
     AlbumGenre, TrackGenre
 )
+from django.http import HttpResponse
+from django.utils import timezone
+from .utils.pdf_generator import generate_track_pdf, generate_album_pdf
 
 
 class AlbumGenreInline(admin.TabularInline):
@@ -156,6 +159,17 @@ class AlbumAdmin(admin.ModelAdmin):
         seconds = obj.total_duration % 60
         return f'{minutes}:{seconds:02d}'
 
+    actions = ['export_as_pdf']
+    
+    def export_as_pdf(self, request, queryset):
+        """Экспортирует выбранные альбомы в PDF"""
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="albums_report_{timezone.now().strftime("%Y%m%d_%H%M%S")}.pdf"'
+        
+        generate_album_pdf(queryset, response)
+        return response
+    export_as_pdf.short_description = _("Экспорт выбранных альбомов в PDF")
+
 
 @admin.register(Track)
 class TrackAdmin(admin.ModelAdmin):
@@ -204,6 +218,17 @@ class TrackAdmin(admin.ModelAdmin):
         minutes = obj.duration // 60
         seconds = obj.duration % 60
         return f'{minutes}:{seconds:02d}'
+
+    actions = ['export_as_pdf']
+    
+    def export_as_pdf(self, request, queryset):
+        """Экспортирует выбранные треки в PDF"""
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="tracks_report_{timezone.now().strftime("%Y%m%d_%H%M%S")}.pdf"'
+        
+        generate_track_pdf(queryset, response)
+        return response
+    export_as_pdf.short_description = _("Экспорт выбранных треков в PDF")
 
 
 @admin.register(Playlist)
