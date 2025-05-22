@@ -32,6 +32,16 @@ class UserActivityManager(models.Manager):
 
 
 class TrackManager(models.Manager):
+    def get_tracks_with_related(self):
+        """Получить треки со всеми связанными данными"""
+        return self.select_related(
+            'artist',
+            'album'
+        ).prefetch_related(
+            'genres',
+            'user_activities'
+        )
+    
     def get_genre_statistics(self):
         """
         Получает статистику по трекам для каждого жанра:
@@ -48,17 +58,15 @@ class TrackManager(models.Manager):
         ).order_by('-tracks_count')
 
     def get_tracks_with_popularity(self):
-        """
-        Аннотирует треки показателем популярности на основе:
-        - Количества прослушиваний (вес 0.6)
-        - Количества лайков (вес 0.4)
-        """
-        return self.annotate(
-            popularity_score=ExpressionWrapper(
-                (F('play_count') * 0.6 + F('likes_count') * 0.4),
-                output_field=FloatField()
-            )
-        ).order_by('-popularity_score')
+        """Аннотирует треки показателем популярности"""
+        return self.prefetch_related(
+            'genres'
+        ).values('genres__title').annotate(
+            tracks_count=Count('id'),
+            total_duration=Sum('duration'),
+            avg_play_count=Avg('play_count'),
+            avg_likes=Avg('likes_count')
+        ).order_by('-tracks_count')
 
     def get_top_artists_by_duration(self, limit=10):
         """
