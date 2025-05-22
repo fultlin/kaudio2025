@@ -5,8 +5,29 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator
 from django.urls import reverse
+from django.core.files.storage import default_storage
 
 from .managers import UserActivityManager, TrackManager
+
+def get_artist_image_path(instance, filename):
+    """Путь для сохранения изображений артиста"""
+    return f'artist_images/{instance.id}/{filename}'
+
+def get_album_image_path(instance, filename):
+    """Путь для сохранения обложек альбомов"""
+    return f'album_images/{instance.id}/{filename}'
+
+def get_track_image_path(instance, filename):
+    """Путь для сохранения обложек треков"""
+    return f'track_images/{instance.id}/{filename}'
+
+def get_profile_image_path(instance, filename):
+    """Путь для сохранения изображений профиля"""
+    return f'profile_images/{instance.id}/{filename}'
+
+def get_playlist_image_path(instance, filename):
+    """Путь для сохранения обложек плейлистов"""
+    return f'playlist_images/{instance.id}/{filename}'
 
 class User(AbstractUser):
     """Модель пользователя"""
@@ -17,10 +38,11 @@ class User(AbstractUser):
         ('moderator', _('Модератор')),
     )
     
-    img_profile_url = models.URLField(
-        verbose_name=_('Ссылка на изображение профиля'),
-        blank=True,
-        null=True
+    profile_image = models.ImageField(
+        upload_to=get_profile_image_path,
+        verbose_name='Изображение профиля',
+        null=True,
+        blank=True
     )
     role = models.CharField(
         max_length=10,
@@ -29,6 +51,31 @@ class User(AbstractUser):
         verbose_name=_('Роль')
     )
     
+    @property
+    def img_profile_url(self):
+        if self.profile_image:
+            return self.profile_image.url
+        return None
+
+    def save(self, *args, **kwargs):
+        if self.img_profile_url and not self.profile_image:
+            try:
+                from urllib.request import urlopen
+                from django.core.files import File
+                from django.core.files.temp import NamedTemporaryFile
+
+                img_temp = NamedTemporaryFile(delete=True)
+                img_temp.write(urlopen(self.img_profile_url).read())
+                img_temp.flush()
+                
+                self.profile_image.save(
+                    os.path.basename(self.img_profile_url),
+                    File(img_temp)
+                )
+            except:
+                pass
+        super().save(*args, **kwargs)
+
     class Meta:
         verbose_name = _('Пользователь')
         verbose_name_plural = _('Пользователи')
@@ -51,8 +98,9 @@ class Artist(models.Model):
         blank=True,
         null=True
     )
-    img_cover_url = models.URLField(
-        verbose_name=_('Ссылка на обложку'),
+    cover_image = models.ImageField(
+        upload_to=get_artist_image_path,
+        verbose_name=_('Изображение обложки'),
         blank=True,
         null=True
     )
@@ -112,8 +160,9 @@ class Album(models.Model):
     release_date = models.DateField(
         verbose_name=_('Дата выпуска')
     )
-    img_url = models.URLField(
-        verbose_name=_('Ссылка на обложку'),
+    cover_image = models.ImageField(
+        upload_to=get_album_image_path,
+        verbose_name=_('Изображение обложки'),
         blank=True,
         null=True
     )
@@ -182,8 +231,9 @@ class Track(models.Model):
         null=True,
         blank=True
     )
-    img_url = models.URLField(
-        verbose_name=_('Ссылка на обложку'),
+    cover_image = models.ImageField(
+        upload_to=get_track_image_path,
+        verbose_name=_('Изображение обложки'),
         blank=True,
         null=True
     )
@@ -238,8 +288,9 @@ class Playlist(models.Model):
         related_name='playlists',
         verbose_name=_('Пользователь')
     )
-    img_url = models.URLField(
-        verbose_name=_('Ссылка на обложку'),
+    cover_image = models.ImageField(
+        upload_to=get_playlist_image_path,
+        verbose_name=_('Изображение обложки'),
         blank=True,
         null=True
     )

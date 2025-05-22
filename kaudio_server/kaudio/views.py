@@ -696,7 +696,7 @@ def login_view(request):
         
         if user.check_password(password):
             token, created = Token.objects.get_or_create(user=user)
-            serializer = UserSerializer(user)
+            serializer = UserSerializer(user, context={'request': request})
             return Response({
                 'token': token.key,
                 'user': serializer.data
@@ -801,39 +801,24 @@ def upload_track_view(request):
 class ProfilePhotoUploadView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
-    
+
     def post(self, request, format=None):
-        """Загрузка изображения профиля пользователя"""
-        print("ProfileImageUploadView POST вызван.")
-        print(f"FILES: {request.FILES}")
-        print(f"DATA: {request.data}")
-        
-        if 'image' not in request.FILES:
-            return Response({
-                'error': 'Изображение не предоставлено'
-            }, status=status.HTTP_400_BAD_REQUEST)
-            
-        image = request.FILES['image']
         user = request.user
+        if 'file' not in request.FILES:
+            return Response({'error': 'No file provided'}, status=400)
+
+        file = request.FILES['file']
         
-        user_images_dir = os.path.join(settings.MEDIA_ROOT, 'profile_images')
-        if not os.path.exists(user_images_dir):
-            os.makedirs(user_images_dir)
-        
-        filename = f"profile_{user.id}_{image.name}"
-        filepath = os.path.join(user_images_dir, filename)
-        
-        with open(filepath, 'wb+') as destination:
-            for chunk in image.chunks():
-                destination.write(chunk)
-        
-        profile_image_url = f"{settings.MEDIA_URL}profile_images/{filename}"
-        user.img_profile_url = profile_image_url
+        # Сохраняем в новое поле
+        user.profile_image = file
+        # Сохраняем URL для обратной совместимости
+        user.img_profile_url = request.build_absolute_uri(user.profile_image.url)
         user.save()
-        
+
         return Response({
-            'img_profile_url': profile_image_url
-        }, status=status.HTTP_200_OK)
+            'message': 'Profile photo uploaded successfully',
+            'url': user.img_profile_url
+        })
 
 
 class ArtistPhotoUploadView(APIView):
@@ -879,11 +864,11 @@ class ArtistPhotoUploadView(APIView):
                     destination.write(chunk)
             
             cover_image_url = f"{settings.MEDIA_URL}artist_images/{filename}"
-            artist.img_cover_url = cover_image_url
+            artist.cover_image = image
             artist.save()
             
             return Response({
-                'img_cover_url': cover_image_url
+                'cover_image_url': cover_image_url
             }, status=status.HTTP_200_OK)
         
         except Artist.DoesNotExist:

@@ -28,20 +28,12 @@ class ProfileImageUploadView(APIView):
         image = request.FILES['image']
         user = request.user
         
-        user_images_dir = os.path.join(settings.MEDIA_ROOT, 'profile_images')
-        if not os.path.exists(user_images_dir):
-            os.makedirs(user_images_dir)
-        
-        filename = f"profile_{user.id}_{image.name}"
-        filepath = os.path.join(user_images_dir, filename)
-        
-        with open(filepath, 'wb+') as destination:
-            for chunk in image.chunks():
-                destination.write(chunk)
-        
-        profile_image_url = f"{settings.MEDIA_URL}profile_images/{filename}"
-        user.img_profile_url = profile_image_url
+        # Сохраняем изображение через ImageField
+        user.profile_image = image
         user.save()
+        
+        # Получаем URL через свойство img_profile_url
+        profile_image_url = user.img_profile_url
         
         return Response({
             'img_profile_url': profile_image_url,
@@ -63,10 +55,6 @@ class ArtistImageUploadView(APIView):
     
     def post(self, request, format=None):
         """Загрузка изображения обложки исполнителя"""
-        print("ArtistImageUploadView вызван")
-        print(f"FILES: {request.FILES}")
-        print(f"DATA: {request.data}")
-        
         if 'image' not in request.FILES:
             return Response({
                 'error': 'Изображение не предоставлено'
@@ -88,26 +76,18 @@ class ArtistImageUploadView(APIView):
                     'error': 'У вас нет прав для редактирования этого исполнителя'
                 }, status=status.HTTP_403_FORBIDDEN)
             
-            artist_images_dir = os.path.join(settings.MEDIA_ROOT, 'artist_images')
-            if not os.path.exists(artist_images_dir):
-                os.makedirs(artist_images_dir)
-            
-            filename = f"artist_{artist.id}_{image.name}"
-            filepath = os.path.join(artist_images_dir, filename)
-            
-            with open(filepath, 'wb+') as destination:
-                for chunk in image.chunks():
-                    destination.write(chunk)
-            
-            cover_image_url = f"{settings.MEDIA_URL}artist_images/{filename}"
-            artist.img_cover_url = cover_image_url
+            # Сохраняем изображение через ImageField
+            artist.cover_image = image
             artist.save()
+            
+            # Получаем URL через свойство
+            cover_image_url = artist.img_cover_url
             
             return Response({
                 'img_cover_url': cover_image_url,
                 'message': 'Изображение исполнителя успешно загружено'
             }, status=status.HTTP_200_OK)
-        
+            
         except Artist.DoesNotExist:
             return Response({
                 'error': 'Исполнитель не найден'

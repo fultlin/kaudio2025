@@ -1,6 +1,10 @@
 import React from "react";
 import styles from "./Avatar.module.scss";
-import { getFullImageUrl, getAvatarInitial } from "../../../utils/imageUtils";
+import {
+  getFullImageUrl,
+  getAvatarInitial,
+  getImageUrl,
+} from "../../../utils/imageUtils";
 
 /**
  * Компонент аватара с поддержкой изображения или заполнителя
@@ -11,20 +15,20 @@ import { getFullImageUrl, getAvatarInitial } from "../../../utils/imageUtils";
  * @param {string} props.className - Дополнительные CSS классы
  */
 const Avatar = ({ imageUrl, username, size = "md", className = "" }) => {
-  const sizeClass = styles[`avatar-${size}`] || styles["avatar-md"];
+  const finalImageUrl = getImageUrl(imageUrl);
 
   return (
-    <div className={`${styles.avatar} ${sizeClass} ${className}`}>
-      {imageUrl ? (
+    <div className={`${styles.avatar} ${styles[size]} ${className}`}>
+      {finalImageUrl ? (
         <img
-          src={getFullImageUrl(imageUrl)}
-          alt={`${username || "User"} avatar`}
+          src={getFullImageUrl(finalImageUrl)}
+          alt={username}
           className={styles.avatarImage}
         />
       ) : (
-        <div className={styles.avatarPlaceholder}>
+        <span className={styles.avatarInitial}>
           {getAvatarInitial(username)}
-        </div>
+        </span>
       )}
     </div>
   );

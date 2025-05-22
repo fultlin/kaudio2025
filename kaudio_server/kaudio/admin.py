@@ -75,7 +75,7 @@ class UserAdmin(admin.ModelAdmin):
             'fields': ('username', 'email', 'password')
         }),
         (_('Персональная информация'), {
-            'fields': ('first_name', 'last_name', 'img_profile_url')
+            'fields': ('first_name', 'last_name', 'profile_image')
         }),
         (_('Разрешения'), {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'role')
@@ -101,7 +101,7 @@ class ArtistAdmin(admin.ModelAdmin):
     readonly_fields = ['monthly_listeners']
     fieldsets = (
         (_('Основная информация'), {
-            'fields': ('email', 'img_cover_url', 'is_verified')
+            'fields': ('email', 'cover_image', 'is_verified')
         }),
         (_('Дополнительно'), {
             'fields': ('bio', 'monthly_listeners')
@@ -138,7 +138,7 @@ class AlbumAdmin(admin.ModelAdmin):
     readonly_fields = ['total_tracks', 'total_duration']
     fieldsets = (
         (_('Основная информация'), {
-            'fields': ('title', 'artist', 'release_date', 'img_url')
+            'fields': ('title', 'artist', 'release_date', 'cover_image')
         }),
         (_('Статистика'), {
             'fields': ('total_tracks', 'total_duration')
@@ -216,7 +216,7 @@ class PlaylistAdmin(admin.ModelAdmin):
     readonly_fields = ['creation_date', 'total_tracks', 'total_duration']
     fieldsets = (
         (_('Основная информация'), {
-            'fields': ('title', 'user', 'img_url', 'is_public')
+            'fields': ('title', 'user', 'cover_image', 'is_public')
         }),
         (_('Статистика'), {
             'fields': ('creation_date', 'total_tracks', 'total_duration')

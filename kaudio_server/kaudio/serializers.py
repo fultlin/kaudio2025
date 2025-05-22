@@ -7,21 +7,45 @@ from .models import (
 
 
 class UserSerializer(serializers.ModelSerializer):
-    img_profile_url = serializers.URLField(required=False, allow_null=True, allow_blank=True)
+    profile_image_url = serializers.SerializerMethodField()
+    img_profile_url = serializers.SerializerMethodField()  # для обратной совместимости
     
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'img_profile_url', 'role', 'last_login', 'date_joined']
+        fields = ['id', 'username', 'email', 'profile_image', 'profile_image_url', 'img_profile_url', 'role', 'last_login', 'date_joined']
         read_only_fields = ['last_login', 'date_joined']
+
+    def get_profile_image_url(self, obj):
+        if obj.profile_image:
+            return self.context['request'].build_absolute_uri(obj.profile_image.url)
+        return None
+
+    def get_img_profile_url(self, obj):
+        # Для обратной совместимости возвращаем то же значение
+        if obj.profile_image:
+            return self.context['request'].build_absolute_uri(obj.profile_image.url)
+        return None
 
 
 class ArtistSerializer(serializers.ModelSerializer):
-    img_cover_url = serializers.URLField(required=False, allow_null=True, allow_blank=True)
+    cover_image_url = serializers.SerializerMethodField()
+    img_cover_url = serializers.SerializerMethodField()  # для обратной совместимости
     
     class Meta:
         model = Artist
-        fields = ['id', 'bio', 'email', 'img_cover_url', 'is_verified', 'monthly_listeners']
+        fields = ['id', 'bio', 'email', 'cover_image', 'cover_image_url', 'img_cover_url', 'is_verified', 'monthly_listeners']
         read_only_fields = ['monthly_listeners']
+
+    def get_cover_image_url(self, obj):
+        if obj.cover_image:
+            return self.context['request'].build_absolute_uri(obj.cover_image.url)
+        return None
+
+    def get_img_cover_url(self, obj):
+        # Для обратной совместимости
+        if obj.cover_image:
+            return self.context['request'].build_absolute_uri(obj.cover_image.url)
+        return None
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -38,13 +62,12 @@ class AlbumSerializer(serializers.ModelSerializer):
         write_only=True
     )
     genres = GenreSerializer(many=True, read_only=True)
-    img_url = serializers.URLField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = Album
         fields = [
             'id', 'title', 'artist', 'artist_id', 'release_date', 
-            'img_url', 'total_tracks', 'total_duration', 'genres'
+            'cover_image', 'total_tracks', 'total_duration', 'genres'
         ]
         read_only_fields = ['total_tracks', 'total_duration']
 
@@ -63,13 +86,12 @@ class TrackSerializer(serializers.ModelSerializer):
         write_only=True
     )
     genres = GenreSerializer(many=True, read_only=True)
-    img_url = serializers.URLField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = Track
         fields = [
             'id', 'title', 'artist', 'artist_id', 'album', 'album_id',
-            'track_number', 'release_date', 'img_url', 'duration', 
+            'track_number', 'release_date', 'cover_image', 'duration', 
             'play_count', 'likes_count', 'is_explicit', 'lyrics', 'genres'
         ]
         read_only_fields = ['play_count', 'likes_count']
@@ -87,7 +109,7 @@ class PlaylistSerializer(serializers.ModelSerializer):
     class Meta:
         model = Playlist
         fields = [
-            'id', 'title', 'user', 'user_id', 'img_url', 'creation_date',
+            'id', 'title', 'user', 'user_id', 'cover_image', 'creation_date',
             'is_public', 'total_tracks', 'total_duration', 'tracks'
         ]
         read_only_fields = ['creation_date', 'total_tracks', 'total_duration']
