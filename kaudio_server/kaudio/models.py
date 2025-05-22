@@ -4,6 +4,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator
+from django.urls import reverse
 
 from .managers import UserActivityManager, TrackManager
 
@@ -550,3 +551,31 @@ class TrackGenre(models.Model):
     
     def __str__(self):
         return f'{self.track.title} - {self.genre.title}'
+
+
+class Statistics(models.Model):
+    """Модель для статистики"""
+    
+    class Meta:
+        verbose_name = _('Статистика')
+        verbose_name_plural = _('Статистика')
+        managed = False
+        
+    def get_absolute_url(self):
+        """Возвращает URL для просмотра статистики"""
+        return reverse('track-genre-statistics')
+    
+    @property
+    def genre_statistics_url(self):
+        """URL для статистики по жанрам"""
+        return reverse('track-genre-statistics')
+    
+    @property
+    def popular_tracks_url(self):
+        """URL для популярных треков"""
+        return reverse('track-popular-tracks')
+    
+    @property
+    def top_artists_url(self):
+        """URL для топ исполнителей"""
+        return reverse('track-top-artists')

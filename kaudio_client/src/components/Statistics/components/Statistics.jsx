@@ -15,19 +15,17 @@ const Statistics = () => {
       setLoading(true);
 
       // Получаем статистику по жанрам
-      const genreResponse = await instance.get("/tracks/genre_statistics/");
+      const genreResponse = await instance.get("tracks/genre-statistics");
       setGenreStats(genreResponse.data.genre_statistics);
 
       // Получаем популярные треки
       const tracksResponse = await instance.get(
-        "/tracks/popular_tracks/?limit=5"
+        "tracks/popular-tracks?limit=5"
       );
       setPopularTracks(tracksResponse.data.popular_tracks);
 
       // Получаем топ исполнителей
-      const artistsResponse = await instance.get(
-        "/tracks/top_artists/?limit=5"
-      );
+      const artistsResponse = await instance.get("tracks/top-artists?limit=5");
       setTopArtists(artistsResponse.data.top_artists);
     } catch (err) {
       setError("Ошибка при загрузке статистики");

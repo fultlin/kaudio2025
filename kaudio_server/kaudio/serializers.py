@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import (
     User, Artist, Genre, Album, Track, Playlist, UserActivity, 
     Subscribe, UserSubscribe, UserAlbum, UserTrack, PlaylistTrack,
-    AlbumGenre, TrackGenre
+    AlbumGenre, TrackGenre, Statistics
 )
 
 
@@ -264,4 +264,16 @@ class TrackGenreSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TrackGenre
-        fields = ['id', 'track', 'track_id', 'genre', 'genre_id'] 
+        fields = ['id', 'track', 'track_id', 'genre', 'genre_id']
+
+
+class StatisticsSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели Statistics"""
+    
+    genre_statistics_url = serializers.URLField(read_only=True)
+    popular_tracks_url = serializers.URLField(read_only=True)
+    top_artists_url = serializers.URLField(read_only=True)
+    
+    class Meta:
+        model = Statistics
+        fields = ['genre_statistics_url', 'popular_tracks_url', 'top_artists_url'] 

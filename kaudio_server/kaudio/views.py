@@ -3,12 +3,12 @@ from rest_framework.decorators import action, api_view, permission_classes, pars
 from rest_framework.response import Response
 from django.db.models import Q, Sum
 from .models import (
-    User, Artist, Genre, Album, Track, Playlist, UserActivity,
+    Statistics, User, Artist, Genre, Album, Track, Playlist, UserActivity,
     Subscribe, UserSubscribe, UserAlbum, UserTrack, PlaylistTrack,
     AlbumGenre, TrackGenre
 )
 from .serializers import (
-    UserSerializer, ArtistSerializer, GenreSerializer, AlbumSerializer,
+    StatisticsSerializer, UserSerializer, ArtistSerializer, GenreSerializer, AlbumSerializer,
     TrackSerializer, PlaylistSerializer, UserActivitySerializer,
     SubscribeSerializer, UserSubscribeSerializer, UserAlbumSerializer,
     UserTrackSerializer, PlaylistTrackSerializer, AlbumGenreSerializer,
@@ -391,7 +391,7 @@ class TrackViewSet(viewsets.ModelViewSet):
         serializer = GenreSerializer(genres, many=True)
         return Response(serializer.data)
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_name='genre-statistics', url_path='genre-statistics')
     def genre_statistics(self, request):
         """
         Получение статистики по жанрам
@@ -402,7 +402,7 @@ class TrackViewSet(viewsets.ModelViewSet):
             'total_genres': len(statistics)
         })
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_name='popular-tracks', url_path='popular-tracks')
     def popular_tracks(self, request):
         """
         Получение популярных треков с рассчитанным рейтингом
@@ -421,7 +421,7 @@ class TrackViewSet(viewsets.ModelViewSet):
             'total_tracks': len(data)
         })
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_name='top-artists', url_path='top-artists')
     def top_artists(self, request):
         """
         Получение топ исполнителей по длительности контента
@@ -924,4 +924,18 @@ def recent_albums(request):
     
     albums = Album.objects.all().order_by('-id')[:limit]
     serializer = AlbumSerializer(albums, many=True)
-    return Response(serializer.data) 
+    return Response(serializer.data)
+
+
+class StatisticsViewSet(viewsets.ViewSet):
+    """ViewSet для работы со статистикой"""
+    
+    permission_classes = [IsAuthenticated]
+    
+    def list(self, request):
+        """
+        Возвращает URLs для всех типов статистики
+        """
+        statistics = Statistics()
+        serializer = StatisticsSerializer(statistics)
+        return Response(serializer.data) 
