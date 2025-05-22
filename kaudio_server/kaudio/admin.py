@@ -148,6 +148,7 @@ class AlbumAdmin(admin.ModelAdmin):
         }),
     )
     inlines = [AlbumGenreInline, TrackInline]
+    actions = ['export_as_pdf', 'recalculate_duration', 'mark_as_released']
     
     @admin.display(description=_('Исполнитель'), ordering='artist__email')
     def get_artist(self, obj):
@@ -159,8 +160,28 @@ class AlbumAdmin(admin.ModelAdmin):
         seconds = obj.total_duration % 60
         return f'{minutes}:{seconds:02d}'
 
-    actions = ['export_as_pdf']
-    
+    def recalculate_duration(self, request, queryset):
+        """Пересчитывает общую длительность альбомов"""
+        for album in queryset:
+            total_duration = sum(track.duration for track in album.tracks.all())
+            total_tracks = album.tracks.count()
+            Album.objects.filter(id=album.id).update(
+                total_duration=total_duration,
+                total_tracks=total_tracks
+            )
+        self.message_user(request, _(
+            f'Длительность пересчитана для {queryset.count()} альбомов'
+        ))
+    recalculate_duration.short_description = _("Пересчитать длительность")
+
+    def mark_as_released(self, request, queryset):
+        """Отмечает альбомы как выпущенные сегодня"""
+        updated = queryset.update(release_date=timezone.now().date())
+        self.message_user(request, _(
+            f'{updated} альбомов отмечены как выпущенные сегодня'
+        ))
+    mark_as_released.short_description = _("Отметить как выпущенные сегодня")
+
     def export_as_pdf(self, request, queryset):
         """Экспортирует выбранные альбомы в PDF"""
         response = HttpResponse(content_type='application/pdf')
@@ -179,6 +200,7 @@ class TrackAdmin(admin.ModelAdmin):
     date_hierarchy = 'release_date'
     raw_id_fields = ['artist', 'album']
     readonly_fields = ['play_count', 'likes_count', 'get_popularity_score']
+    actions = ['export_as_pdf', 'reset_play_count', 'mark_as_explicit', 'mark_as_non_explicit']
     
     def get_popularity_score(self, obj):
         """Показывает рейтинг популярности трека"""
@@ -219,8 +241,30 @@ class TrackAdmin(admin.ModelAdmin):
         seconds = obj.duration % 60
         return f'{minutes}:{seconds:02d}'
 
-    actions = ['export_as_pdf']
-    
+    def reset_play_count(self, request, queryset):
+        """Сбрасывает счетчик прослушиваний для выбранных треков"""
+        updated = queryset.update(play_count=0)
+        self.message_user(request, _(
+            f'Счетчик прослушиваний сброшен для {updated} треков'
+        ))
+    reset_play_count.short_description = _("Сбросить счетчик прослушиваний")
+
+    def mark_as_explicit(self, request, queryset):
+        """Отмечает выбранные треки как имеющие ненормативное содержание"""
+        updated = queryset.update(is_explicit=True)
+        self.message_user(request, _(
+            f'{updated} треков отмечены как имеющие ненормативное содержание'
+        ))
+    mark_as_explicit.short_description = _("Отметить как 18+")
+
+    def mark_as_non_explicit(self, request, queryset):
+        """Отмечает выбранные треки как не имеющие ненормативного содержания"""
+        updated = queryset.update(is_explicit=False)
+        self.message_user(request, _(
+            f'{updated} треков отмечены как не имеющие ненормативного содержания'
+        ))
+    mark_as_non_explicit.short_description = _("Снять отметку 18+")
+
     def export_as_pdf(self, request, queryset):
         """Экспортирует выбранные треки в PDF"""
         response = HttpResponse(content_type='application/pdf')
@@ -248,6 +292,7 @@ class PlaylistAdmin(admin.ModelAdmin):
         }),
     )
     inlines = [PlaylistTrackInline]
+    actions = ['make_public', 'make_private', 'recalculate_tracks']
     
     @admin.display(description=_('Пользователь'), ordering='user__username')
     def get_user(self, obj):
@@ -258,6 +303,36 @@ class PlaylistAdmin(admin.ModelAdmin):
         minutes = obj.total_duration // 60
         seconds = obj.total_duration % 60
         return f'{minutes}:{seconds:02d}'
+
+    def make_public(self, request, queryset):
+        """Делает выбранные плейлисты публичными"""
+        updated = queryset.update(is_public=True)
+        self.message_user(request, _(
+            f'{updated} плейлистов стали публичными'
+        ))
+    make_public.short_description = _("Сделать публичными")
+
+    def make_private(self, request, queryset):
+        """Делает выбранные плейлисты приватными"""
+        updated = queryset.update(is_public=False)
+        self.message_user(request, _(
+            f'{updated} плейлистов стали приватными'
+        ))
+    make_private.short_description = _("Сделать приватными")
+
+    def recalculate_tracks(self, request, queryset):
+        """Пересчитывает количество треков и общую длительность плейлистов"""
+        for playlist in queryset:
+            total_duration = sum(pt.track.duration for pt in playlist.playlist_tracks.all())
+            total_tracks = playlist.playlist_tracks.count()
+            Playlist.objects.filter(id=playlist.id).update(
+                total_duration=total_duration,
+                total_tracks=total_tracks
+            )
+        self.message_user(request, _(
+            f'Статистика пересчитана для {queryset.count()} плейлистов'
+        ))
+    recalculate_tracks.short_description = _("Пересчитать статистику")
 
 
 @admin.register(UserActivity)
