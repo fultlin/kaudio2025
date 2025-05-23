@@ -1,7 +1,7 @@
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action, api_view, permission_classes, parser_classes
 from rest_framework.response import Response
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Count, Avg, F
 from .models import (
     Statistics, User, Artist, Genre, Album, Track, Playlist, UserActivity,
     Subscribe, UserSubscribe, UserAlbum, UserTrack, PlaylistTrack,
@@ -26,6 +26,7 @@ import logging
 from rest_framework.views import APIView
 from django.utils import timezone
 from django.http import FileResponse
+from django.db.models.functions import Lower
 
 logger = logging.getLogger(__name__)
 
@@ -100,9 +101,62 @@ class UserViewSet(viewsets.ModelViewSet):
 class ArtistViewSet(viewsets.ModelViewSet):
     queryset = Artist.objects.all()
     serializer_class = ArtistSerializer
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['email']
     ordering_fields = ['monthly_listeners']
+
+    def list(self, request, *args, **kwargs):
+        search = request.query_params.get('search', '')
+        print(f"\n[Artist Search Debug] ====== НАЧАЛО ПОИСКА АРТИСТОВ ======")
+        print(f"[Artist Search Debug] Поисковый запрос: '{search}'")
+        
+        if not search:
+            return super().list(request, *args, **kwargs)
+
+        queryset = Artist.objects.select_related('user').all()
+        print(f"[Artist Search Debug] Всего артистов в базе: {queryset.count()}")
+
+        exact_matches = queryset.filter(
+            Q(user__username__iexact=search) |
+            Q(email__iexact=search)
+        )
+        print(f"[Artist Search Debug] Найдено точных совпадений: {exact_matches.count()}")
+        for artist in exact_matches:
+            print(f"[Artist Search Debug] Точное совпадение: username={artist.user.username if artist.user else 'None'}, email={artist.email}")
+
+        if not exact_matches.exists():
+            queryset = queryset.filter(
+                Q(user__username__icontains=search) |
+                Q(email__icontains=search)
+            )
+        else:
+            queryset = exact_matches
+
+        print(f"[Artist Search Debug] Итоговое количество результатов: {queryset.count()}")
+        for artist in queryset:
+            print(f"[Artist Search Debug] Найден артист: username={artist.user.username if artist.user else 'None'}, email={artist.email}")
+        print(f"[Artist Search Debug] ====== КОНЕЦ ПОИСКА АРТИСТОВ ======\n")
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def get_queryset(self):
+        queryset = Artist.objects.select_related('user').all()
+        search = self.request.query_params.get('search', None)
+        
+        if search:
+            search = search.lower()
+            print(f"[Artist Search Debug] Поисковый запрос (в нижнем регистре): {search}")
+            
+            queryset = queryset.annotate(
+                username_lower=Lower('user__username')
+            ).filter(username_lower__contains=search)
+            
+            print(f"[Artist Search Debug] SQL: {str(queryset.query)}")
+            artists = list(queryset)
+            print(f"[Artist Search Debug] Найдено артистов: {len(artists)}")
+            for artist in artists:
+                print(f"[Artist Search Debug] Артист: {artist.user.username if artist.user else 'No username'}")
+        
+        return queryset.distinct()
 
     def update(self, request, *args, **kwargs):
         if 'img_cover_url' in request.data and request.data['img_cover_url'] == '':
@@ -159,6 +213,30 @@ class AlbumViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'artist__email']
     ordering_fields = ['release_date', 'total_tracks', 'total_duration']
+
+    def get_queryset(self):
+        queryset = Album.objects.all()
+        
+        # Получаем параметры запроса
+        title = self.request.query_params.get('title', None)
+        artist = self.request.query_params.get('artist', None)
+        genre = self.request.query_params.get('genre', None)
+        year = self.request.query_params.get('year', None)
+        
+        # Применяем фильтры
+        if title:
+            queryset = queryset.filter(title__icontains=title)
+        if artist:
+            queryset = queryset.filter(
+                Q(artist__email__icontains=artist) | 
+                Q(artist__bio__icontains=artist)
+            )
+        if genre:
+            queryset = queryset.filter(genres__title__icontains=genre)
+        if year:
+            queryset = queryset.filter(release_date__year=year)
+            
+        return queryset.distinct()
 
     def create(self, request, *args, **kwargs):
         """Создает альбом и связывает его с пользователем"""
@@ -286,9 +364,63 @@ class AlbumViewSet(viewsets.ModelViewSet):
 class TrackViewSet(viewsets.ModelViewSet):
     queryset = Track.objects.all()
     serializer_class = TrackSerializer
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['title', 'artist__email', 'album__title']
     ordering_fields = ['release_date', 'play_count', 'likes_count', 'duration']
+
+    def list(self, request, *args, **kwargs):
+        search = request.query_params.get('search', '')
+        print(f"\n[Search Debug] ====== НАЧАЛО ПОИСКА ТРЕКОВ ======")
+        print(f"[Search Debug] Поисковый запрос: '{search}'")
+        
+        if not search:
+            return super().list(request, *args, **kwargs)
+
+        # Получаем базовый queryset
+        queryset = Track.objects.select_related('artist', 'artist__user', 'album').all()
+        print(f"[Search Debug] Всего треков в базе: {queryset.count()}")
+
+        # Поиск по нику пользователя
+        user_tracks = queryset.filter(artist__user__username__icontains=search)
+        print(f"[Search Debug] Найдено треков по нику пользователя: {user_tracks.count()}")
+        
+        # Используем values() для логирования
+        user_tracks_info = user_tracks.values('title', 'artist__user__username', 'artist__email')
+        for track in user_tracks_info:
+            print(f"[Search Debug] Трек по нику: {track['title']} | Артист: username={track['artist__user__username']}")
+
+        # Поиск по email артиста
+        email_tracks = queryset.filter(artist__email__icontains=search)
+        print(f"[Search Debug] Найдено треков по email артиста: {email_tracks.count()}")
+        
+        # Используем values() для логирования
+        email_tracks_info = email_tracks.values('title', 'artist__email')
+        for track in email_tracks_info:
+            print(f"[Search Debug] Трек по email: {track['title']} | Артист: email={track['artist__email']}")
+
+        # Поиск по названию трека
+        title_tracks = queryset.filter(title__icontains=search)
+        print(f"[Search Debug] Найдено по названию трека: {title_tracks.count()}")
+        
+        # Используем values() для логирования
+        title_tracks_info = title_tracks.values('title')
+        for track in title_tracks_info:
+            print(f"[Search Debug] Трек по названию: {track['title']}")
+
+        # Объединяем все результаты
+        queryset = user_tracks | email_tracks | title_tracks
+        queryset = queryset.distinct()
+        
+        # Выводим итоговые результаты
+        print(f"[Search Debug] Всего уникальных результатов: {queryset.count()}")
+        
+        # Используем values() для итогового логирования
+        results_info = queryset.values('title', 'artist__user__username', 'artist__email')
+        for track in results_info:
+            artist_info = f"username={track['artist__user__username'] or 'None'}, email={track['artist__email'] or 'None'}"
+            print(f"[Search Debug] Трек: {track['title']} | Артист: {artist_info}")
+        print(f"[Search Debug] ====== КОНЕЦ ПОИСКА ТРЕКОВ ======\n")
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
     @action(detail=True, methods=['get'])
     def stream(self, request, pk=None):
@@ -387,7 +519,9 @@ class TrackViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def genres(self, request, pk=None):
         track = self.get_object()
-        genres = Genre.objects.filter(tracks=track)
+        # Используем values_list для получения только ID жанров
+        genre_ids = track.genres.values_list('id', flat=True)
+        genres = Genre.objects.filter(id__in=genre_ids)
         serializer = GenreSerializer(genres, many=True)
         return Response(serializer.data)
 
@@ -396,7 +530,14 @@ class TrackViewSet(viewsets.ModelViewSet):
         """
         Получение статистики по жанрам
         """
-        statistics = Track.objects.get_genre_statistics()
+        # Используем values() для агрегации данных
+        statistics = Track.objects.values('genres__title').annotate(
+            track_count=Count('id'),
+            total_duration=Sum('duration'),
+            avg_plays=Avg('play_count'),
+            avg_likes=Avg('likes_count')
+        ).order_by('-track_count')
+        
         return Response({
             'genre_statistics': list(statistics),
             'total_genres': len(statistics)
@@ -408,17 +549,18 @@ class TrackViewSet(viewsets.ModelViewSet):
         Получение популярных треков с рассчитанным рейтингом
         """
         limit = int(request.query_params.get('limit', 10))
-        tracks = Track.objects.get_tracks_with_popularity()[:limit]
         
-        data = []
-        for track in tracks:
-            track_data = self.get_serializer(track).data
-            track_data['popularity_score'] = track.popularity_score
-            data.append(track_data)
-            
+        # Используем values() для получения только нужных полей
+        tracks = Track.objects.annotate(
+            popularity_score=(F('play_count') + F('likes_count') * 2) / (1 + F('duration') / 300)
+        ).values(
+            'id', 'title', 'artist__user__username', 'artist__email',
+            'play_count', 'likes_count', 'duration', 'popularity_score'
+        ).order_by('-popularity_score')[:limit]
+        
         return Response({
-            'popular_tracks': data,
-            'total_tracks': len(data)
+            'popular_tracks': list(tracks),
+            'total_tracks': len(tracks)
         })
 
     @action(detail=False, methods=['get'], url_name='top-artists', url_path='top-artists')
@@ -427,7 +569,14 @@ class TrackViewSet(viewsets.ModelViewSet):
         Получение топ исполнителей по длительности контента
         """
         limit = int(request.query_params.get('limit', 10))
-        artists = Track.objects.get_top_artists_by_duration(limit=limit)
+        
+        # Используем values() для агрегации данных по артистам
+        artists = Track.objects.values('artist__email', 'artist__user__username').annotate(
+            total_tracks=Count('id'),
+            total_duration=Sum('duration'),
+            avg_duration=Avg('duration'),
+            total_plays=Sum('play_count')
+        ).order_by('-total_duration')[:limit]
         
         return Response({
             'top_artists': list(artists),
@@ -462,8 +611,9 @@ class PlaylistViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def tracks(self, request, pk=None):
         playlist = self.get_object()
-        playlist_tracks = PlaylistTrack.objects.filter(playlist=playlist).order_by('position')
-        serializer = PlaylistTrackSerializer(playlist_tracks, many=True)
+        track_ids = PlaylistTrack.objects.filter(playlist=playlist).order_by('position').values_list('track_id', flat=True)
+        tracks = Track.objects.filter(id__in=track_ids)
+        serializer = TrackSerializer(tracks, many=True)
         return Response(serializer.data)
 
     @action(detail=True, methods=['post'])
@@ -478,8 +628,8 @@ class PlaylistViewSet(viewsets.ModelViewSet):
         except Track.DoesNotExist:
             return Response({'error': 'Track not found'}, status=404)
         
-        max_position = PlaylistTrack.objects.filter(playlist=playlist).order_by('-position').first()
-        position = (max_position.position + 1) if max_position else 1
+        max_position = PlaylistTrack.objects.filter(playlist=playlist).values_list('position', flat=True).order_by('-position').first()
+        position = (max_position + 1) if max_position else 1
         
         playlist_track = PlaylistTrack.objects.create(
             playlist=playlist,
@@ -524,11 +674,9 @@ class PlaylistViewSet(viewsets.ModelViewSet):
         
         playlist_track.delete()
         
-        position = 1
-        for pt in PlaylistTrack.objects.filter(playlist=playlist).order_by('position'):
-            pt.position = position
-            pt.save()
-            position += 1
+        track_ids = PlaylistTrack.objects.filter(playlist=playlist).order_by('position').values_list('id', flat=True)
+        for position, track_id in enumerate(track_ids, 1):
+            PlaylistTrack.objects.filter(id=track_id).update(position=position)
         
         return Response({'status': 'track removed from playlist'})
 

@@ -88,6 +88,14 @@ class User(AbstractUser):
 class Artist(models.Model):
     """Модель исполнителя"""
     
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='artist_profile',
+        verbose_name=_('Пользователь'),
+        null=True,
+        blank=True
+    )
     bio = models.TextField(
         verbose_name=_('Биография'),
         blank=True,

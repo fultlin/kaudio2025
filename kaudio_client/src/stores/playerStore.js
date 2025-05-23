@@ -9,6 +9,10 @@ class PlayerStore {
   isPlaying = false;
   currentTrackIndex = null;
   tracks = [];
+  currentTrack = null;
+  volume = 1;
+  progress = 0;
+  duration = 0;
 
   constructor() {
     makeAutoObservable(this);
@@ -99,7 +103,38 @@ class PlayerStore {
 
     this.loadTrack(this.tracks[newIndex], newIndex, this.tracks);
   }
+
+  setCurrentTrack = (track) => {
+    this.currentTrack = track;
+  };
+
+  togglePlay = () => {
+    this.isPlaying = !this.isPlaying;
+  };
+
+  setIsPlaying = (isPlaying) => {
+    this.isPlaying = isPlaying;
+  };
+
+  setVolume = (volume) => {
+    this.volume = Math.max(0, Math.min(1, volume));
+  };
+
+  setProgress = (progress) => {
+    this.progress = progress;
+  };
+
+  setDuration = (duration) => {
+    this.duration = duration;
+  };
+
+  resetPlayer = () => {
+    this.currentTrack = null;
+    this.isPlaying = false;
+    this.progress = 0;
+    this.duration = 0;
+  };
 }
 
-const playerStore = new PlayerStore();
+export const playerStore = new PlayerStore();
 export default playerStore;

@@ -13,6 +13,8 @@ class HomeStore {
   error = null;
   // Кэш пользователей для сопоставления с артистами
   userCache = {};
+  tracks = [];
+  albums = [];
 
   constructor() {
     makeAutoObservable(this, {
@@ -36,6 +38,9 @@ class HomeStore {
       fetchAlbumTracks: action,
       isTrackLiked: action,
       isAlbumLiked: action,
+      setTracks: action,
+      setAlbums: action,
+      clearResults: action,
     });
   }
 
@@ -262,7 +267,6 @@ class HomeStore {
     this.setError(null);
 
     try {
-
       const response = await instance.get(
         "user-activities/?activity_type=like"
       );
@@ -579,6 +583,19 @@ class HomeStore {
       console.error("Ошибка при проверке лайка альбома:", error);
       return false;
     }
+  }
+
+  setTracks(tracks) {
+    this.tracks = tracks;
+  }
+
+  setAlbums(albums) {
+    this.albums = albums;
+  }
+
+  clearResults() {
+    this.tracks = [];
+    this.albums = [];
   }
 }
 

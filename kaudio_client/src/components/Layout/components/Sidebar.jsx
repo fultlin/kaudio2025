@@ -3,6 +3,7 @@ import { observer } from "mobx-react-lite";
 import authStore from "../../../stores/authStore";
 import styles from "./Sidebar.module.scss";
 import UploadIcon from "../../Home/components/UploadIcon";
+import Search from "../../Search/component";
 
 const Sidebar = observer(() => {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ const Sidebar = observer(() => {
       <div className={styles.sidebarHeader}>
         <h2>KAudio</h2>
       </div>
+
 
       {user && (
         <div className={styles.userProfile} onClick={handleProfileClick}>
@@ -38,6 +40,7 @@ const Sidebar = observer(() => {
         </div>
       )}
 
+      <Search isSidebar={true} />
       <nav className={styles.sidebarNav}>
         <Link to="/" className={styles.navLink}>
           <span className={styles.navIcon}>🏠</span>

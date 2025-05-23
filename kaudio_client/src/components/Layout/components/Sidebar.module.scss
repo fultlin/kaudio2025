@@ -1,140 +1,140 @@
 .sidebar {
-    width: 250px;
-    min-width: 250px;
-    background-color: $sidebar-color;
-    padding-top: 20px;
-    border-right: 1px solid $border-color;
+  width: 250px;
+  min-width: 250px;
+  background-color: $sidebar-color;
+  padding-top: 20px;
+  border-right: 1px solid $border-color;
+  display: flex;
+  flex-direction: column;
+  height: 97%;
+  z-index: 10;
+
+  .sidebarHeader {
+    padding: 20px 15px;
+    border-bottom: 1px solid #333;
+
+    h2 {
+      margin: 0;
+      color: white;
+      font-size: 24px;
+    }
+  }
+
+  .userProfile {
+    padding: 20px 20px;
+    margin-top: 15px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #333;
     display: flex;
-    flex-direction: column;
-    height: 97%;
-    z-index: 10;
-  
-    .sidebarHeader {
-      padding: 0 20px 20px;
-      border-bottom: 1px solid $border-color;
-  
-      h2 {
-        font-size: 28px;
-        margin: 0;
-        color: $primary-color; /* Зеленый цвет для логотипа */
-      }
+    align-items: center;
+    gap: 15px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.05);
     }
-  
-    .userProfile {
-      padding: 20px 20px;
-      margin-bottom: 20px;
-      border-bottom: 1px solid #333;
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      cursor: pointer;
-      transition: background-color 0.2s;
-  
-      &:hover {
-        background-color: rgba(255, 255, 255, 0.05);
+
+    .profileImage {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      overflow: hidden;
+      background-color: #333;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
       }
-  
-      .profileImage {
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        overflow: hidden;
-        background-color: #333;
-  
-        img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-  
-        .defaultAvatar {
-          width: 100%;
-          height: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background-color: #1db954;
-          color: #fff;
-          font-size: 20px;
-          font-weight: bold;
-        }
-      }
-  
-      .profileInfo {
-        flex: 1;
-  
-        h3 {
-          margin: 0 0 5px;
-          font-size: 16px;
-          font-weight: 500;
-        }
-  
-        p {
-          margin: 0;
-          font-size: 14px;
-          color: #b3b3b3;
-        }
-      }
-    }
-  
-    .sidebarNav {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      padding: 0 15px;
-      flex: 1;
-  
-      .navLink {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 12px;
-        border-radius: 8px;
-        text-decoration: none;
-        color: #b3b3b3;
-        transition: all 0.2s;
-  
-        &:hover {
-          color: #fff;
-          background-color: #212121;
-        }
-  
-        &.active {
-          color: #fff;
-          background-color: #333;
-          font-weight: 500;
-        }
-  
-        .navIcon {
-          font-size: 18px;
-        }
-      }
-    }
-  
-    .uploadWrapper {
-      padding: 15px 20px 15px;
-      margin-top: auto;
-      border-top: 1px solid #333;
-  
-      .uploadButton {
+
+      .defaultAvatar {
+        width: 100%;
+        height: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
-        padding: 12px;
-        width: 90%;
-        border-radius: 30px;
         background-color: #1db954;
-        color: #000;
-        text-decoration: none;
+        color: #fff;
+        font-size: 20px;
+        font-weight: bold;
+      }
+    }
+
+    .profileInfo {
+      flex: 1;
+
+      h3 {
+        margin: 0 0 5px;
+        font-size: 16px;
         font-weight: 500;
-        transition: all 0.2s;
-  
-        &:hover {
-          background-color: #1ed760;
-          transform: scale(1.05);
-        }
+      }
+
+      p {
+        margin: 0;
+        font-size: 14px;
+        color: #b3b3b3;
       }
     }
   }
-  
+
+  .sidebarNav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 15px;
+    flex: 1;
+
+    .navLink {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      text-decoration: none;
+      color: #b3b3b3;
+      transition: all 0.2s;
+
+      &:hover {
+        color: #fff;
+        background-color: #212121;
+      }
+
+      &.active {
+        color: #fff;
+        background-color: #333;
+        font-weight: 500;
+      }
+
+      .navIcon {
+        font-size: 18px;
+      }
+    }
+  }
+
+  .uploadWrapper {
+    padding: 15px 20px 15px;
+    margin-top: auto;
+    border-top: 1px solid #333;
+
+    .uploadButton {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px;
+      width: 90%;
+      border-radius: 30px;
+      background-color: #1db954;
+      color: #000;
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.2s;
+
+      &:hover {
+        background-color: #1ed760;
+        transform: scale(1.05);
+      }
+    }
+  }
+}
