@@ -21,6 +21,7 @@ from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.static import serve
 from .upload_views import ProfileImageUploadView, ArtistImageUploadView, TrackUploadView, AlbumImageUploadView
 from kaudio import views as kaudio_views
 from rest_framework.decorators import api_view, permission_classes, parser_classes
@@ -65,6 +66,11 @@ urlpatterns = [
     path('redoc/', 
          schema_view.with_ui('redoc', cache_timeout=0), 
          name='schema-redoc'),
+    
+    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
