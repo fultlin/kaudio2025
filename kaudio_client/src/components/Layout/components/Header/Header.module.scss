@@ -1,3 +1,5 @@
+@import "../../../../variables.scss";
+
 .header {
   background-color: #fff;
   box-shadow: 0 1px 10px rgba(0, 0, 0, 0.1);
@@ -8,15 +10,22 @@
 
 .wrapper {
   max-width: 1440px;
+  height: 100%;
   margin: 0 auto;
   padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .navigation {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 70px;
+  width: 100%;
+  height: $header-height;
+  background-color: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: $header-z-index;
 }
 
 .leftNav {
@@ -240,5 +249,78 @@
 
   &:hover {
     background-color: #f0f2f5;
+  }
+}
+
+// Медиа-запросы для адаптивности
+@media (max-width: $tablet-breakpoint) {
+  .navigation {
+    height: $mobile-header-height;
+  }
+
+  .logo {
+    font-size: 18px;
+    margin-right: 15px;
+  }
+
+  .navLinks {
+    gap: 12px;
+  }
+
+  .navLink {
+    font-size: 14px;
+    padding: 6px 10px;
+  }
+
+  .centerNav {
+    max-width: 200px;
+    margin: 0 8px;
+  }
+
+  .userButton {
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+
+  .userAvatar,
+  .userAvatarPlaceholder {
+    width: 26px;
+    height: 26px;
+  }
+}
+
+@media (max-width: $mobile-breakpoint) {
+  .wrapper {
+    padding: 0 8px;
+  }
+
+  .navigation {
+    height: $mobile-header-height;
+  }
+
+  .logo {
+    font-size: 16px;
+    margin-right: 10px;
+  }
+
+  .navLinks {
+    display: none;
+  }
+
+  .centerNav {
+    max-width: none;
+    margin: 0 6px;
+  }
+
+  .userButton {
+    padding: 4px 6px;
+    font-size: 13px;
+  }
+
+  .userAvatar,
+  .userAvatarPlaceholder {
+    width: 24px;
+    height: 24px;
+    margin-left: 4px;
   }
 }

@@ -40,3 +40,38 @@
   height: 80px;
   font-size: 32px;
 }
+
+// Медиа-запросы для адаптивности
+@media (max-width: 768px) {
+  .avatar-lg {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+  }
+
+  .avatar-md {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .avatar-lg {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+
+  .avatar-md {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+  }
+
+  .avatar-sm {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+}

@@ -2,12 +2,12 @@
 
 .mainContainer {
   width: 100%;
-  height: 100vh;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   background-color: $background-color;
   color: $text-color;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
 }
 
 .appContent {
@@ -16,26 +16,44 @@
   overflow: hidden;
 }
 
+.albumContainer {
+  width: 100%;
+  height: calc(100vh - #{$player-height});
+  overflow-y: auto;
+  padding: 30px;
+  padding-bottom: $content-bottom-padding;
+  color: $text-color;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: $background-color;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #535353;
+    border-radius: 4px;
+
+    &:hover {
+      background: #636363;
+    }
+  }
+}
+
 /* Стили для плеера */
 .playerContainer {
   width: 100%;
-  height: 90px;
+  height: $player-height;
   background-color: $secondary-back-color;
   border-top: 1px solid $border-color;
-  z-index: 20;
+  z-index: $player-z-index;
   position: sticky;
   bottom: 0;
   left: 0;
   right: 0;
   box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.3);
-}
-
-.albumContainer {
-  width: 100%;
-  height: 100%;
-  overflow-y: auto;
-  padding: 30px;
-  color: $text-color;
 }
 
 .albumHeader {
@@ -334,4 +352,19 @@
 .error {
   color: #ff6b6b;
   background-color: rgba(255, 107, 107, 0.1);
+}
+
+@media (max-width: 768px) {
+  .albumContainer {
+    padding: 20px;
+    padding-bottom: $mobile-content-bottom-padding;
+    height: calc(100vh - #{$total-player-mobile-height});
+  }
+}
+
+@media (max-width: 480px) {
+  .albumContainer {
+    padding: 15px;
+    padding-bottom: $mobile-content-bottom-padding;
+  }
 }

@@ -5,7 +5,7 @@ import styles from "./Sidebar.module.scss";
 import UploadIcon from "../../Home/components/UploadIcon";
 import Search from "../../Search/component";
 
-const Sidebar = observer(() => {
+const Sidebar = observer(({ isOpen }) => {
   const navigate = useNavigate();
   const user = authStore.user;
   const isArtist = authStore.isArtist;
@@ -16,11 +16,10 @@ const Sidebar = observer(() => {
   };
 
   return (
-    <div className={styles.sidebar}>
+    <div className={`${styles.sidebar} ${isOpen ? styles.open : ""}`}>
       <div className={styles.sidebarHeader}>
         <h2>KAudio</h2>
       </div>
-
 
       {user && (
         <div className={styles.userProfile} onClick={handleProfileClick}>

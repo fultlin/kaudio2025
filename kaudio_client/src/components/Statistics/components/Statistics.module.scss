@@ -213,3 +213,92 @@
     transform: rotate(360deg);
   }
 }
+
+// Медиа-запросы для адаптивности
+@media (max-width: 1024px) {
+  .statistics {
+    .section {
+      margin-bottom: 30px;
+    }
+
+    .genreGrid {
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 15px;
+    }
+
+    .artistsList {
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .statistics {
+    .section {
+      margin-bottom: 25px;
+    }
+
+    .genreGrid {
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+
+    .artistsList {
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+
+    .genreCard,
+    .artistCard {
+      padding: 15px;
+    }
+
+    .trackCard {
+      flex-direction: column;
+      gap: 10px;
+      text-align: center;
+
+      .trackInfo {
+        width: 100%;
+      }
+
+      .trackStats {
+        width: 100%;
+        text-align: center;
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .statistics {
+    .section {
+      margin-bottom: 20px;
+    }
+
+    .sectionHeader {
+      flex-direction: column;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .genreGrid {
+      grid-template-columns: 1fr;
+    }
+
+    .artistsList {
+      grid-template-columns: 1fr;
+    }
+
+    .genreCard,
+    .artistCard {
+      padding: 12px;
+    }
+
+    .statItem {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 4px;
+    }
+  }
+}

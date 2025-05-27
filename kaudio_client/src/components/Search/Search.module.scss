@@ -205,3 +205,47 @@
     background: #1ed760;
   }
 }
+
+// Медиа-запросы для адаптивности
+@media (max-width: 768px) {
+  .searchInputWrapper {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .searchInput {
+    font-size: 14px;
+    padding: 10px 14px;
+  }
+
+  .searchButton {
+    width: 100%;
+    padding: 10px 0;
+  }
+
+  .searchTypeSelector {
+    .searchTypeSelect {
+      width: 100%;
+    }
+  }
+
+  .searchResults {
+    max-height: 250px;
+  }
+}
+
+@media (max-width: 480px) {
+  .searchInput {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+
+  .searchResults {
+    max-height: 200px;
+  }
+
+  .resultItem {
+    padding: 8px;
+    font-size: 13px;
+  }
+}

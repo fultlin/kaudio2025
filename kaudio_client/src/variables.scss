@@ -5,8 +5,34 @@ $sidebar-color: #090909;
 $primary-color: #1db954;
 $secondary-text-color: #b3b3b3;
 $text-secondary-color: #b3b3b3;
-$border-color: #333333;
+$border-color: #282828;
 $hover-color: rgba(255, 255, 255, 0.1);
 $accent-color: #1db954;
-$error-color: #ff4d4d;
+$error-color: #ff4444;
 $primary-back-color: #121212;
+
+// Высоты элементов
+$player-height: 90px;
+$mobile-nav-height: 50px;
+$header-height: 60px;
+$mobile-header-height: 50px;
+$total-player-mobile-height: $player-height + $mobile-nav-height;
+
+// Отступы
+$content-bottom-padding: $player-height + 20px;
+$mobile-content-bottom-padding: $player-height + 10px;
+
+// Z-индексы
+$player-z-index: 100;
+$sidebar-z-index: 90;
+$header-z-index: 80;
+$overlay-z-index: 85;
+
+// Брейкпоинты
+$mobile-breakpoint: 480px;
+$tablet-breakpoint: 768px;
+$desktop-breakpoint: 1024px;
+
+// Анимации
+$transition-duration: 0.3s;
+$transition-timing: ease-in-out;

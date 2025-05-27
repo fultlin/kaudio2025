@@ -1,140 +1,340 @@
+@import "../../../variables.scss";
+
 .sidebar {
   width: 250px;
   min-width: 250px;
-  background-color: $sidebar-color;
-  padding-top: 20px;
+  background-color: $background-color;
   border-right: 1px solid $border-color;
   display: flex;
   flex-direction: column;
-  height: 97%;
-  z-index: 10;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: $sidebar-z-index;
 
-  .sidebarHeader {
-    padding: 20px 15px;
-    border-bottom: 1px solid #333;
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
 
-    h2 {
-      margin: 0;
-      color: white;
-      font-size: 24px;
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #535353;
+    border-radius: 3px;
+  }
+
+  @media (max-width: $mobile-breakpoint) {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px;
+    height: 100vh;
+    transform: translateX(-100%);
+    transition: transform $transition-duration $transition-timing;
+    background-color: $background-color;
+    display: flex;
+    flex-direction: column;
+
+    &.open {
+      transform: translateX(0);
+    }
+  }
+}
+
+.sidebarOverlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: $overlay-z-index;
+  opacity: 0;
+  transition: opacity $transition-duration $transition-timing;
+  backdrop-filter: blur(3px);
+
+  &.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  @media (max-width: $mobile-breakpoint) {
+    display: block;
+  }
+}
+
+.sidebarHeader {
+  padding: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid $border-color;
+
+  @media (max-width: $mobile-breakpoint) {
+    padding: 12px 20px;
+  }
+
+  h2 {
+    font-size: 24px;
+    margin: 0;
+    color: $primary-color;
+  }
+}
+
+.userProfile {
+  padding: 16px;
+  border-bottom: 1px solid $border-color;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  .profileImage {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .defaultAvatar {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: $primary-color;
+      color: #fff;
+      font-size: 20px;
+      font-weight: bold;
     }
   }
 
-  .userProfile {
-    padding: 20px 20px;
-    margin-top: 15px;
-    margin-bottom: 20px;
-    border-bottom: 1px solid #333;
+  .profileInfo {
+    flex: 1;
+    min-width: 0;
+
+    h3 {
+      margin: 0 0 4px;
+      font-size: 14px;
+      font-weight: 500;
+      color: $text-color;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    p {
+      margin: 0;
+      font-size: 12px;
+      color: $secondary-text-color;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+}
+
+.sidebarNav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  flex: 1;
+  min-height: 0;
+
+  .navLink {
     display: flex;
     align-items: center;
-    gap: 15px;
-    cursor: pointer;
-    transition: background-color 0.2s;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    color: $text-color;
+    transition: all 0.2s;
+    font-size: 15px;
 
     &:hover {
-      background-color: rgba(255, 255, 255, 0.05);
+      background-color: rgba(255, 255, 255, 0.1);
     }
 
-    .profileImage {
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      overflow: hidden;
-      background-color: #333;
-
-      img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-
-      .defaultAvatar {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background-color: #1db954;
-        color: #fff;
-        font-size: 20px;
-        font-weight: bold;
-      }
+    &.active {
+      background-color: rgba(255, 255, 255, 0.15);
+      font-weight: 500;
     }
 
-    .profileInfo {
-      flex: 1;
+    .navIcon {
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+  }
+}
 
-      h3 {
-        margin: 0 0 5px;
-        font-size: 16px;
-        font-weight: 500;
-      }
+.uploadWrapper {
+  padding: 16px;
+  margin-top: auto;
+  border-top: 1px solid $border-color;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 
-      p {
-        margin: 0;
-        font-size: 14px;
-        color: #b3b3b3;
-      }
+  .uploadButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    width: 90%;
+    border-radius: 8px;
+    background-color: $primary-color;
+    color: #000;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s;
+    font-size: 14px;
+
+    &:hover {
+      background-color: lighten($primary-color, 5%);
+      transform: scale(1.02);
+    }
+
+    .navIcon {
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+  }
+}
+
+.menuButton {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: $text-color;
+  font-size: 24px;
+  padding: 8px;
+  cursor: pointer;
+  transition: color $transition-duration $transition-timing;
+
+  &:hover {
+    color: $primary-color;
+  }
+}
+
+@media (max-width: $tablet-breakpoint) {
+  .sidebar {
+    width: 200px;
+    min-width: 200px;
+  }
+
+  .sidebarHeader {
+    padding: 15px;
+    margin-bottom: 15px;
+
+    h2 {
+      font-size: 20px;
     }
   }
 
   .sidebarNav {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 0 15px;
-    flex: 1;
+    padding: 0 10px;
+    gap: 3px;
 
     .navLink {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px;
-      border-radius: 8px;
-      text-decoration: none;
-      color: #b3b3b3;
-      transition: all 0.2s;
-
-      &:hover {
-        color: #fff;
-        background-color: #212121;
-      }
-
-      &.active {
-        color: #fff;
-        background-color: #333;
-        font-weight: 500;
-      }
+      padding: 8px;
+      font-size: 14px;
+      gap: 10px;
 
       .navIcon {
-        font-size: 18px;
+        font-size: 16px;
       }
     }
   }
 
   .uploadWrapper {
-    padding: 15px 20px 15px;
-    margin-top: auto;
-    border-top: 1px solid #333;
+    padding: 12px;
 
     .uploadButton {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 12px;
-      width: 90%;
-      border-radius: 30px;
-      background-color: #1db954;
-      color: #000;
-      text-decoration: none;
-      font-weight: 500;
-      transition: all 0.2s;
+      padding: 8px;
+      font-size: 13px;
+    }
+  }
+}
 
-      &:hover {
-        background-color: #1ed760;
-        transform: scale(1.05);
-      }
+@media (max-width: $mobile-breakpoint) {
+  .menuButton {
+    display: flex;
+  }
+
+  .sidebarOverlay {
+    display: block;
+    pointer-events: none;
+
+    &.visible {
+      pointer-events: auto;
+    }
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px;
+    height: 100vh;
+    transform: translateX(-100%);
+    border-right: 1px solid $border-color;
+
+
+    &.open {
+      transform: translateX(0);
+    }
+
+    .closeButton {
+      display: block;
+    }
+  }
+
+  .sidebarHeader {
+    padding: 12px;
+    margin-bottom: 10px;
+
+    h2 {
+      font-size: 18px;
+    }
+  }
+
+  .sidebarNav {
+    padding: 0 12px;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 4px;
+
+    .navLink {
+      padding: 12px;
+      font-size: 14px;
+      width: 100%;
+    }
+  }
+
+  .uploadWrapper {
+    padding: 12px;
+    margin-top: auto;
+
+    .uploadButton {
+      padding: 10px;
+      font-size: 14px;
     }
   }
 }

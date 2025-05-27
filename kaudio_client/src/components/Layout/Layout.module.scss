@@ -1,20 +1,150 @@
+@import "../../variables.scss";
+
 .container {
   width: 100%;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #121212;
+  background-color: $background-color;
+  overflow: hidden;
 }
 
 .main {
-  width: 100%;
-  height: 100%;
   flex: 1;
   display: flex;
+  overflow: hidden;
+  position: relative;
+  height: calc(100vh - #{$header-height});
+
+  @media (max-width: $tablet-breakpoint) {
+    height: calc(100vh - #{$mobile-header-height});
+  }
+}
+
+.menuButton {
+  display: none;
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: $header-z-index + 1;
+  background: transparent;
+  border: none;
+  color: $text-color;
+  font-size: 24px;
+  padding: 8px;
+  cursor: pointer;
+  transition: color $transition-duration $transition-timing;
+
+  &:hover {
+    color: $primary-color;
+  }
+
+  @media (max-width: $mobile-breakpoint) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.sidebarOverlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: $overlay-z-index;
+  opacity: 0;
+  transition: opacity $transition-duration $transition-timing;
+  pointer-events: none;
+  backdrop-filter: blur(3px);
+
+  &.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  @media (max-width: $mobile-breakpoint) {
+    display: block;
+  }
+}
+
+.sidebar {
+  @media (max-width: $mobile-breakpoint) {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    transform: translateX(-100%);
+    transition: transform $transition-duration $transition-timing;
+    z-index: $sidebar-z-index;
+    background-color: $sidebar-color;
+    border-right: 1px solid $border-color;
+
+    &.open {
+      transform: translateX(0);
+    }
+  }
 }
 
 .wrapper {
   max-width: 1440px;
   margin: 0 auto;
   padding: 0 20px;
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  height: 100%;
+  padding: 20px;
+  padding-bottom: $content-bottom-padding;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: $background-color;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #535353;
+    border-radius: 4px;
+
+    &:hover {
+      background: #636363;
+    }
+  }
+}
+
+// Специальные стили для страниц с плеером
+.hasPlayer {
+  height: calc(100vh - #{$header-height} - #{$player-height});
+  padding-bottom: $content-bottom-padding;
+
+  @media (max-width: $tablet-breakpoint) {
+    height: calc(
+      100vh - #{$mobile-header-height} - #{$player-height} - #{$mobile-nav-height}
+    );
+    padding-bottom: $mobile-content-bottom-padding;
+  }
+}
+
+@media (max-width: $tablet-breakpoint) {
+  .content {
+    padding: 15px;
+    padding-bottom: $mobile-content-bottom-padding;
+  }
+}
+
+@media (max-width: $mobile-breakpoint) {
+  .content {
+    padding: 10px;
+    padding-bottom: $mobile-content-bottom-padding;
+  }
 }
