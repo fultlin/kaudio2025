@@ -22,6 +22,10 @@ const Statistics = () => {
       const tracksResponse = await instance.get(
         "tracks/popular-tracks?limit=5"
       );
+      console.log(
+        "Данные популярных треков:",
+        tracksResponse.data.popular_tracks
+      );
       setPopularTracks(tracksResponse.data.popular_tracks);
 
       // Получаем топ исполнителей
@@ -131,7 +135,7 @@ const Statistics = () => {
               <span className={styles.trackRank}>{index + 1}</span>
               <div className={styles.trackInfo}>
                 <h3>{track.title}</h3>
-                <p>{track.artist.email}</p>
+                <p>{track.artist__email}</p>
               </div>
               <div className={styles.trackStats}>
                 <div className={styles.statItem}>
