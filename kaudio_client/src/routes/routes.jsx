@@ -11,6 +11,9 @@ import UploadTrack from "../components/UploadTrack/component";
 import UploadAlbum from "../components/UploadAlbum/component";
 import AlbumWithPlayer from "../components/Album";
 import Playlists from "../components/Playlists/component";
+import CreatePlaylist from "../components/Playlists/CreatePlaylist";
+import EditPlaylist from "../components/Playlists/EditPlaylist";
+import PlaylistView from "../components/Playlists/PlaylistView";
 import Artist from "../components/Artist/component";
 import StatisticsPage from "../components/Statistics";
 import SearchPage from "../components/SearchPage/component";
@@ -60,6 +63,18 @@ const router = createBrowserRouter([
       {
         path: "playlists",
         element: <Playlists />,
+      },
+      {
+        path: "playlists/create",
+        element: <CreatePlaylist />,
+      },
+      {
+        path: "playlists/:id",
+        element: <PlaylistView />,
+      },
+      {
+        path: "playlists/:id/edit",
+        element: <EditPlaylist />,
       },
       {
         path: "artist/:id",

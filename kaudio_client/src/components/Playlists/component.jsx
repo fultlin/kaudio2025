@@ -20,10 +20,13 @@ const Playlists = observer(() => {
   const [author, setAuthor] = useState("");
   const [activeTrackId, setActiveTrackId] = useState(null);
   const [directAlbums, setDirectAlbums] = useState([]);
+  const [playlists, setPlaylists] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [currentTrack, setCurrentTrack] = useState(null);
 
   const likedAlbums = toJS(homeStore.likedAlbums) || [];
   const isLoading = homeStore.isLoading;
-  const error = homeStore.error;
   const user = authStore.user;
   const isArtist = authStore.isArtist;
 
@@ -173,54 +176,54 @@ const Playlists = observer(() => {
   };
 
   useEffect(() => {
-    // Проверяем, авторизован ли пользователь
     if (!authStore.isAuthenticated) {
-      console.log("Пользователь не авторизован, перенаправляем на /auth");
       navigate("/auth");
       return;
     }
 
-    console.log("Начинаем загрузку лайкнутых альбомов");
+    // Загружаем плейлисты пользователя
+    fetchPlaylists();
 
-    // Запускаем прямой запрос альбомов независимо от результата запроса через store
-    fetchAlbumsDirectly();
-
-    // Также загружаем лайкнутые альбомы через store для синхронизации состояния
-    homeStore
-      .fetchLikedAlbums()
-      .then((albums) => {
-        console.log(`Получено ${albums.length} лайкнутых альбомов через store`);
-        console.log("Данные альбомов из store:", albums);
-      })
-      .catch((error) => {
-        console.error(
-          "Ошибка при загрузке лайкнутых альбомов через store:",
-          error
-        );
-      });
+    // Загружаем лайкнутые альбомы
+    homeStore.fetchLikedAlbums();
   }, [navigate]);
 
-  // Обработчик клика по альбому
-  const handleAlbumClick = (albumId) => {
-    // Переходим на страницу альбома
-    navigate(`/album/${albumId}`);
+  const fetchPlaylists = async () => {
+    try {
+      setLoading(true);
+      const response = await instance.get("/playlists/");
+      setPlaylists(response.data);
+      setError(null);
+    } catch (err) {
+      setError("Ошибка при загрузке плейлистов");
+      console.error("Ошибка:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Обработчик клика по профилю пользователя
-  const handleProfileClick = () => {
-    navigate("/settings");
+  const handleCreatePlaylist = () => {
+    navigate("/playlists/create");
+  };
+
+  const handleEditPlaylist = (playlistId) => {
+    navigate(`/playlists/${playlistId}/edit`);
+  };
+
+  const handleDeletePlaylist = async (playlistId) => {
+    if (window.confirm("Вы уверены, что хотите удалить этот плейлист?")) {
+      try {
+        await instance.delete(`/playlists/${playlistId}/`);
+        fetchPlaylists();
+      } catch (err) {
+        setError("Ошибка при удалении плейлиста");
+        console.error("Ошибка:", err);
+      }
+    }
   };
 
   const handlePlayPause = () => {
     setIsPlaying(!isPlaying);
-  };
-
-  const handlePrevTrack = () => {
-    // Логика переключения на предыдущий трек
-  };
-
-  const handleNextTrack = () => {
-    // Логика переключения на следующий трек
   };
 
   // Выбираем, какие альбомы отображать: из store или полученные напрямую
@@ -239,68 +242,138 @@ const Playlists = observer(() => {
   return (
     <div className={styles.mainContainer}>
       <div className={styles.appContent}>
-
         <div className={styles.contentArea}>
           <main className={styles.content}>
+            {/* Секция плейлистов пользователя */}
             <section className={styles.section}>
-              <h2>Избранные альбомы</h2>
-              {isLoading && directAlbums.length === 0 ? (
+              <div className={styles.sectionHeader}>
+                <h2>Мои плейлисты</h2>
+                <button
+                  onClick={handleCreatePlaylist}
+                  className={styles.createButton}
+                >
+                  Создать плейлист
+                </button>
+              </div>
+
+              {loading ? (
                 <div className={styles.loading}>Загрузка...</div>
-              ) : error && directAlbums.length === 0 ? (
+              ) : error ? (
                 <div className={styles.error}>{error}</div>
+              ) : playlists.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <p>У вас пока нет плейлистов</p>
+                  <button
+                    onClick={handleCreatePlaylist}
+                    className={styles.createButton}
+                  >
+                    Создать первый плейлист
+                  </button>
+                </div>
               ) : (
-                <div className={styles.albumsGrid}>
-                  {validAlbums.length > 0 ? (
-                    validAlbums.map((album) => (
+                <div className={styles.playlistsGrid}>
+                  {playlists.map((playlist) => (
+                    <div key={playlist.id} className={styles.playlistCard}>
                       <div
-                        key={album.id}
-                        className={styles.albumCard}
-                        onClick={() => handleAlbumClick(album.id)}
+                        className={styles.playlistImageContainer}
+                        onClick={() => navigate(`/playlists/${playlist.id}`)}
                       >
-                        <div className={styles.albumImageContainer}>
-                          {album.img_url ? (
-                            <img
-                              src={album.img_url}
-                              alt={album.title}
-                              className={styles.albumImage}
-                              onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.style.display = "none";
-                                e.target.parentNode.querySelector(
-                                  "." + styles.noAlbumImage
-                                ).style.display = "flex";
-                              }}
-                            />
-                          ) : (
-                            <div className={styles.noAlbumImage}>
-                              <span>🎵</span>
-                            </div>
-                          )}
-                          <div
-                            className={styles.noAlbumImage}
-                            style={{ display: album.img_url ? "none" : "flex" }}
-                          >
+                        {playlist.cover_image ? (
+                          <img
+                            src={playlist.cover_image}
+                            alt={playlist.title}
+                            className={styles.playlistImage}
+                          />
+                        ) : (
+                          <div className={styles.noPlaylistImage}>
                             <span>🎵</span>
                           </div>
-                        </div>
-                        <div className={styles.albumInfo}>
-                          <h3 className={styles.albumTitle}>{album.title}</h3>
-                          <p className={styles.albumArtist}>
-                            {album.artist?.user?.username ||
-                              album.artist?.email ||
-                              "Неизвестный исполнитель"}
-                          </p>
-                          <p className={styles.albumTracks}>
-                            Треков: {album.total_tracks || 0}
-                          </p>
-                        </div>
+                        )}
                       </div>
-                    ))
-                  ) : (
-                    <div className={styles.emptyState}>
-                      У вас пока нет избранных альбомов
+                      <div
+                        className={styles.playlistInfo}
+                        onClick={() => navigate(`/playlists/${playlist.id}`)}
+                      >
+                        <h3 className={styles.playlistTitle}>
+                          {playlist.title}
+                        </h3>
+                        <p className={styles.playlistDescription}>
+                          {playlist.description || "Нет описания"}
+                        </p>
+                        <p className={styles.trackCount}>
+                          Треков: {playlist.tracks_count || 0}
+                        </p>
+                      </div>
+                      <div className={styles.playlistActions}>
+                        <button
+                          onClick={() => handleEditPlaylist(playlist.id)}
+                          className={styles.editButton}
+                        >
+                          Редактировать
+                        </button>
+                        <button
+                          onClick={() => handleDeletePlaylist(playlist.id)}
+                          className={styles.deleteButton}
+                        >
+                          Удалить
+                        </button>
+                      </div>
                     </div>
-                  )}
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Секция избранных альбомов */}
+            <section className={styles.section}>
+              <h2>Избранные альбомы</h2>
+              {isLoading ? (
+                <div className={styles.loading}>Загрузка...</div>
+              ) : likedAlbums.length === 0 ? (
+                <div className={styles.emptyState}>
+                  У вас пока нет избранных альбомов
+                </div>
+              ) : (
+                <div className={styles.albumsGrid}>
+                  {likedAlbums.map((album) => (
+                    <div
+                      key={album.id}
+                      className={styles.albumCard}
+                      onClick={() => navigate(`/album/${album.id}`)}
+                    >
+                      <div className={styles.albumImageContainer}>
+                        {album.img_url ? (
+                          <img
+                            src={album.img_url}
+                            alt={album.title}
+                            className={styles.albumImage}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.style.display = "none";
+                              e.target.parentNode.querySelector(
+                                "." + styles.noAlbumImage
+                              ).style.display = "flex";
+                            }}
+                          />
+                        ) : (
+                          <div className={styles.noAlbumImage}>
+                            <span>🎵</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className={styles.albumInfo}>
+                        <h3 className={styles.albumTitle}>{album.title}</h3>
+                        <p className={styles.albumArtist}>
+                          {album.artist?.user?.username ||
+                            album.artist?.email ||
+                            "Неизвестный исполнитель"}
+                        </p>
+                        <p className={styles.albumTracks}>
+                          Треков: {album.total_tracks || 0}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </section>
@@ -310,13 +383,10 @@ const Playlists = observer(() => {
 
       <div className={styles.playerContainer}>
         <MiniPlayer
-          trackName={trackName}
-          author={author}
-          name={src}
+          trackName={currentTrack?.title || ""}
+          author={currentTrack?.artist || ""}
           isPlaying={isPlaying}
           onPlayPause={handlePlayPause}
-          onPrev={handlePrevTrack}
-          onNext={handleNextTrack}
         />
       </div>
     </div>

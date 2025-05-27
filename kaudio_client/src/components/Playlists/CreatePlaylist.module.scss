@@ -1,0 +1,109 @@
+@import "../../variables.scss";
+
+.createPlaylist {
+  max-width: 600px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background-color: $secondary-back-color;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+  h2 {
+    margin-bottom: 2rem;
+    color: $text-color;
+    font-size: 1.8rem;
+    text-align: center;
+  }
+}
+
+.error {
+  background-color: rgba(255, 68, 68, 0.1);
+  color: #ff4444;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  label {
+    color: $text-color;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  input,
+  textarea {
+    padding: 0.75rem;
+    border: 1px solid $border-color;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.05);
+    color: $text-color;
+    font-size: 1rem;
+    transition: all 0.2s;
+
+    &:focus {
+      outline: none;
+      border-color: $primary-color;
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    &::placeholder {
+      color: darken($text-color, 40%);
+    }
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 100px;
+  }
+}
+
+.buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+
+  button {
+    flex: 1;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 30px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      transform: translateY(-2px);
+    }
+  }
+}
+
+.submitButton {
+  background-color: $primary-color;
+  color: #000;
+
+  &:hover {
+    background-color: lighten($primary-color, 5%);
+  }
+}
+
+.cancelButton {
+  background-color: transparent;
+  border: 1px solid $border-color !important;
+  color: $text-color;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+}

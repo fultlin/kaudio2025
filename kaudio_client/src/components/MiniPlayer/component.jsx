@@ -18,6 +18,7 @@ export default function MiniPlayer({
   // Загружаем трек и сбрасываем состояние
   useEffect(() => {
     if (name) {
+      console.log("MiniPlayer: Загрузка нового трека:", name);
       const audioElement = playerRef.current;
 
       audioElement.pause();
@@ -26,7 +27,15 @@ export default function MiniPlayer({
 
       // Обновляем продолжительность трека после загрузки метаданных
       audioElement.onloadedmetadata = () => {
+        console.log(
+          "MiniPlayer: Метаданные загружены, длительность:",
+          audioElement.duration
+        );
         setDuration(audioElement.duration);
+      };
+
+      audioElement.onerror = (e) => {
+        console.error("MiniPlayer: Ошибка загрузки аудио:", e);
       };
     }
   }, [name]);
@@ -35,10 +44,12 @@ export default function MiniPlayer({
   useEffect(() => {
     const audioElement = playerRef.current;
     if (isPlaying && name) {
+      console.log("MiniPlayer: Попытка воспроизведения");
       audioElement.play().catch((error) => {
-        console.error("Ошибка воспроизведения:", error);
+        console.error("MiniPlayer: Ошибка воспроизведения:", error);
       });
     } else {
+      console.log("MiniPlayer: Пауза");
       audioElement.pause();
     }
   }, [isPlaying, name]);
