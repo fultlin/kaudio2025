@@ -192,36 +192,44 @@ const Album = observer((props) => {
   }
 
   return (
-    <div className={styles.albumContainer}>
+    <div className={styles.albumContainer} role="main" id="main-content">
       <div className={styles.albumHeader}>
-        <div className={styles.albumCover}>
+        <div
+          className={styles.albumCover}
+          role="img"
+          aria-label={`Обложка альбома ${album.title}`}
+        >
           {album.img_url ? (
-            <img src={album.img_url} alt={album.title} />
+            <img src={album.img_url} alt={`Обложка альбома ${album.title}`} />
           ) : (
-            <div className={styles.noImage}></div>
+            <div className={styles.noImage} aria-hidden="true"></div>
           )}
         </div>
 
         <div className={styles.albumInfo}>
-          <div className={styles.albumType}>Альбом</div>
+          <div className={styles.albumType} aria-label="Тип контента">
+            Альбом
+          </div>
           <h1 className={styles.albumTitle}>{album.title}</h1>
 
-          <div className={styles.albumMeta}>
+          <div className={styles.albumMeta} role="contentinfo">
             {album.artist && (
               <Link
                 to={`/artist/${album.artist.id}`}
                 className={styles.artistLink}
                 onClick={(e) => e.stopPropagation()}
+                aria-label={`Перейти на страницу исполнителя ${
+                  album.artist.user?.username ||
+                  album.artist.email ||
+                  "Неизвестный исполнитель"
+                }`}
               >
                 {album.artist.img_cover_url && (
                   <div className={styles.artistImage}>
                     <img
                       src={album.artist.img_cover_url}
-                      alt={
-                        album.artist.user?.username ||
-                        album.artist.email ||
-                        "Неизвестный исполнитель"
-                      }
+                      alt=""
+                      aria-hidden="true"
                     />
                   </div>
                 )}
@@ -233,12 +241,16 @@ const Album = observer((props) => {
               </Link>
             )}
 
-            <span className={styles.dot}>•</span>
+            <span className={styles.dot} aria-hidden="true">
+              •
+            </span>
             <span className={styles.releaseYear}>
               {new Date(album.release_date).getFullYear()}
             </span>
 
-            <span className={styles.dot}>•</span>
+            <span className={styles.dot} aria-hidden="true">
+              •
+            </span>
             <span className={styles.songCount}>
               {album.total_tracks}{" "}
               {album.total_tracks === 1
@@ -250,27 +262,56 @@ const Album = observer((props) => {
           </div>
 
           <div className={styles.albumControls}>
-            <button onClick={handlePlayAlbum} className={styles.playButton}>
-              <span className={styles.playIcon}>▶</span>
+            <button
+              onClick={handlePlayAlbum}
+              className={styles.playButton}
+              aria-label={`${
+                isPlaying ? "Остановить" : "Воспроизвести"
+              } альбом ${album.title}`}
+            >
+              <span className={styles.playIcon} aria-hidden="true">
+                ▶
+              </span>
             </button>
 
-            <div className={styles.albumLike} onClick={handleLikeAlbum}>
+            <button
+              className={styles.albumLike}
+              onClick={handleLikeAlbum}
+              aria-label={`${
+                isAlbumLiked ? "Удалить из избранного" : "Добавить в избранное"
+              } альбом ${album.title}`}
+              aria-pressed={isAlbumLiked}
+            >
               {isAlbumLiked ? (
-                <span className={styles.likedIcon}>❤️</span>
+                <span className={styles.likedIcon} aria-hidden="true">
+                  ❤️
+                </span>
               ) : (
-                <span className={styles.unlikedIcon}>🤍</span>
+                <span className={styles.unlikedIcon} aria-hidden="true">
+                  🤍
+                </span>
               )}
-            </div>
+            </button>
           </div>
         </div>
       </div>
 
-      <div className={styles.trackList}>
-        <div className={styles.trackListHeader}>
-          <div className={styles.trackNumberHeader}>#</div>
-          <div></div> {/* Пустая колонка для кнопки воспроизведения */}
-          <div className={styles.trackTitleHeader}>Название</div>
-          <div className={styles.trackDurationHeader}>Длительность</div>
+      <div
+        className={styles.trackList}
+        role="region"
+        aria-label="Список треков"
+      >
+        <div className={styles.trackListHeader} role="row">
+          <div className={styles.trackNumberHeader} role="columnheader">
+            #
+          </div>
+          <div role="columnheader" aria-hidden="true"></div>
+          <div className={styles.trackTitleHeader} role="columnheader">
+            Название
+          </div>
+          <div className={styles.trackDurationHeader} role="columnheader">
+            Длительность
+          </div>
         </div>
 
         {tracks.map((track, index) => (

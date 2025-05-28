@@ -1,5 +1,20 @@
 @import "../../../../variables.scss";
 
+.skipLink {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: $primary-color;
+  color: #000;
+  padding: 8px;
+  z-index: 1000;
+  transition: top 0.2s;
+
+  &:focus {
+    top: 0;
+  }
+}
+
 .header {
   background-color: #fff;
   box-shadow: 0 1px 10px rgba(0, 0, 0, 0.1);
@@ -65,12 +80,21 @@
 }
 
 .navLink {
-  color: #333;
+  color: #ffffff;
   text-decoration: none;
   font-size: 16px;
   font-weight: 500;
   padding: 5px 0;
   position: relative;
+
+  &:focus {
+    outline: 2px solid $primary-color;
+    outline-offset: 2px;
+  }
+
+  &:focus:not(:focus-visible) {
+    outline: none;
+  }
 
   &:after {
     content: "";
@@ -79,7 +103,7 @@
     height: 2px;
     bottom: 0;
     left: 0;
-    background-color: #4a76a8;
+    background-color: $primary-color;
     transition: width 0.3s;
   }
 
@@ -88,7 +112,7 @@
   }
 
   &.active {
-    color: #4a76a8;
+    color: $primary-color;
 
     &:after {
       width: 100%;

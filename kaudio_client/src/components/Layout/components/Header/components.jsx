@@ -39,11 +39,22 @@ const Header = observer(({ auth, onLogout }) => {
   }, []);
 
   return (
-    <header className={styles.header}>
+    <header className={styles.header} role="banner">
+      <a href="#main-content" className={styles.skipLink}>
+        Перейти к основному содержимому
+      </a>
       <div className={styles.wrapper}>
-        <nav className={styles.navigation}>
+        <nav
+          className={styles.navigation}
+          role="navigation"
+          aria-label="Основная навигация"
+        >
           <div className={styles.leftNav}>
-            <NavLink to="/" className={styles.logo}>
+            <NavLink
+              to="/"
+              className={styles.logo}
+              aria-label="Главная страница Kaudio"
+            >
               Kaudio
             </NavLink>
 
@@ -57,6 +68,9 @@ const Header = observer(({ auth, onLogout }) => {
                         ? `${styles.navLink} ${styles.active}`
                         : styles.navLink
                     }
+                    aria-current={({ isActive }) =>
+                      isActive ? "page" : undefined
+                    }
                   >
                     Главная
                   </NavLink>
@@ -68,6 +82,9 @@ const Header = observer(({ auth, onLogout }) => {
                       isActive
                         ? `${styles.navLink} ${styles.active}`
                         : styles.navLink
+                    }
+                    aria-current={({ isActive }) =>
+                      isActive ? "page" : undefined
                     }
                   >
                     Музыка

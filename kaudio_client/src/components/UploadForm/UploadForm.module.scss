@@ -1,3 +1,5 @@
+@import "../../variables.scss";
+
 .uploadContainer {
   max-width: 800px;
   margin: 0 auto;
@@ -11,12 +13,20 @@
 }
 
 .formGroup {
-  margin-bottom: 20px;
+  margin-bottom: 1.5rem;
 
   label {
     display: block;
-    margin-bottom: 8px;
-    font-weight: 500;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    color: #ffffff;
+  }
+
+  .helpText {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.7);
   }
 }
 
@@ -48,23 +58,26 @@
 }
 
 .input,
-.textarea,
-.select {
+.selectMultiple,
+.fileInput {
   width: 100%;
-  padding: 10px;
-  background-color: #333;
-  border: 1px solid #444;
-  border-radius: 4px;
-  color: #fff;
+  padding: 0.75rem;
   font-size: 1rem;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: #ffffff;
+  transition: border-color 0.2s, box-shadow 0.2s;
 
   &:focus {
+    border-color: var(--focus-color);
+    box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.25);
     outline: none;
-    border-color: #1db954;
   }
 
-  &:disabled {
-    opacity: 0.7;
+  &:disabled,
+  &[readonly] {
+    background-color: rgba(255, 255, 255, 0.05);
     cursor: not-allowed;
   }
 }
@@ -75,46 +88,71 @@
 }
 
 .selectMultiple {
-  height: 100px;
+  min-height: 120px;
+
+  option {
+    padding: 0.5rem;
+    background-color: #121212;
+
+    &:checked {
+      background-color: var(--focus-color);
+      color: #000000;
+    }
+  }
 }
 
 .fileInput {
-  background-color: #333;
-  border-radius: 4px;
-  padding: 8px;
-  width: 100%;
-  border: 1px solid #444;
-  color: #fff;
+  padding: 0.5rem;
+  cursor: pointer;
 
-  &::-webkit-file-upload-button {
-    background-color: #1db954;
-    color: white;
+  &::file-selector-button {
+    padding: 0.5rem 1rem;
+    margin-right: 1rem;
+    background-color: var(--focus-color);
     border: none;
-    padding: 5px 10px;
-    border-radius: 3px;
+    border-radius: 4px;
+    color: #000000;
     cursor: pointer;
-    margin-right: 10px;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: lighten($primary-color, 10%);
+    }
+
+    &:focus {
+      outline: 2px solid #ffffff;
+      outline-offset: 2px;
+    }
   }
 }
 
 .submitButton {
-  background-color: #1db954;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s;
   width: 100%;
+  padding: 1rem;
+  font-size: 1rem;
+  font-weight: 500;
+  background-color: var(--focus-color);
+  border: none;
+  border-radius: 4px;
+  color: #000000;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.2s;
 
-  &:hover {
-    background-color: #1ed760;
+  &:hover:not(:disabled) {
+    background-color: lighten($primary-color, 10%);
+    transform: translateY(-1px);
+  }
+
+  &:focus {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
   }
 
   &:disabled {
-    background-color: #333;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.5);
     cursor: not-allowed;
+    transform: none;
   }
 }
 

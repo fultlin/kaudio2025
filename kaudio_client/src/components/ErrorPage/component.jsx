@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import styles from "./ErrorPage.module.scss";
 
 const ErrorPage = ({ message, redirectTo = "/", timeout = 3000 }) => {
   const navigate = useNavigate();
@@ -13,13 +14,15 @@ const ErrorPage = ({ message, redirectTo = "/", timeout = 3000 }) => {
   }, [navigate, redirectTo, timeout]);
 
   return (
-    <div className="error-page">
-      <h2>Ошибка</h2>
-      <p>{message}</p>
-      <p>
-        Вы будете перенаправлены на главную страницу через {timeout / 1000}{" "}
-        секунды...
-      </p>
+    <div className={styles.errorPage} role="alert" aria-live="assertive">
+      <div className={styles.errorContent}>
+        <h1 className={styles.errorTitle}>Ошибка</h1>
+        <p className={styles.errorMessage}>{message}</p>
+        <p className={styles.redirectMessage} aria-live="polite">
+          Вы будете перенаправлены на главную страницу через {timeout / 1000}{" "}
+          секунды...
+        </p>
+      </div>
     </div>
   );
 };

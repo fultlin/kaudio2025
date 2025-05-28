@@ -299,7 +299,7 @@ const UploadForm = observer(() => {
         )}
 
         <div className={styles.formGroup}>
-          <label htmlFor="duration">
+          <label htmlFor="duration" id="duration-label">
             Длительность (сек) - заполняется автоматически:
           </label>
           <input
@@ -312,14 +312,18 @@ const UploadForm = observer(() => {
             required
             readOnly
             className={styles.input}
+            aria-labelledby="duration-label"
+            aria-readonly="true"
           />
-          <small>
+          <small id="duration-help" className={styles.helpText}>
             Длительность определяется автоматически из загруженного файла
           </small>
         </div>
 
         <div className={styles.formGroup}>
-          <label htmlFor="genre_ids">Жанры:</label>
+          <label htmlFor="genre_ids" id="genres-label">
+            Жанры:
+          </label>
           <select
             id="genre_ids"
             name="genre_ids"
@@ -327,6 +331,8 @@ const UploadForm = observer(() => {
             value={formData.genre_ids}
             onChange={handleGenreChange}
             className={styles.selectMultiple}
+            aria-labelledby="genres-label"
+            aria-describedby="genres-help"
           >
             {genres.map((genre) => (
               <option key={genre.id} value={genre.id}>
@@ -334,11 +340,15 @@ const UploadForm = observer(() => {
               </option>
             ))}
           </select>
-          <small>Удерживайте Ctrl для выбора нескольких жанров</small>
+          <small id="genres-help" className={styles.helpText}>
+            Удерживайте Ctrl для выбора нескольких жанров
+          </small>
         </div>
 
         <div className={styles.formGroup}>
-          <label htmlFor="audio_file">Аудиофайл:</label>
+          <label htmlFor="audio_file" id="file-label">
+            Аудиофайл:
+          </label>
           <input
             type="file"
             id="audio_file"
@@ -346,6 +356,8 @@ const UploadForm = observer(() => {
             onChange={handleFileChange}
             required
             className={styles.fileInput}
+            aria-labelledby="file-label"
+            aria-required="true"
           />
         </div>
 
@@ -353,6 +365,9 @@ const UploadForm = observer(() => {
           type="submit"
           disabled={loading || !artistId || (useAlbum && !formData.album_id)}
           className={styles.submitButton}
+          aria-disabled={
+            loading || !artistId || (useAlbum && !formData.album_id)
+          }
         >
           {loading ? "Загрузка..." : "Загрузить трек"}
         </button>
