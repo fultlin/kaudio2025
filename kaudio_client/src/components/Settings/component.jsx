@@ -5,6 +5,7 @@ import authStore from "../../stores/authStore";
 import { useNavigate } from "react-router-dom";
 import styles from "./Settings.module.scss";
 import { getFullImageUrl, getAvatarInitial } from "../../utils/imageUtils";
+import debounce from "lodash/debounce";
 
 const Settings = observer(() => {
   const [userProfile, setUserProfile] = useState({
@@ -52,6 +53,37 @@ const Settings = observer(() => {
 
   const navigate = useNavigate();
 
+  // Создаем дебаунсированную версию функции получения данных артиста
+  const debouncedFetchArtistData = debounce(async (userId) => {
+    try {
+      const artistsRes = await instance.get(`artists/?user=${userId}`);
+      if (artistsRes.data && artistsRes.data.length > 0) {
+        const artist = artistsRes.data[0];
+        if (
+          (artist.user && artist.user.id === userId) ||
+          (!artist.user && artist.id)
+        ) {
+          const artistData = {
+            id: artist.id,
+            username: artist.username,
+            bio: artist.bio || "",
+            img_cover_url: artist.img_cover_url || "",
+            monthly_listeners: artist.monthly_listeners || 0,
+            is_verified: artist.is_verified || false,
+            user: artist.user,
+          };
+          setArtistProfile(artistData);
+          setOriginalArtistProfile(artistData);
+          if (authStore.setArtistProfile) {
+            authStore.setArtistProfile(artist);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Ошибка при получении данных артиста:", error);
+    }
+  }, 300);
+
   // Загрузка данных пользователя и его профиля исполнителя
   useEffect(() => {
     if (!authStore.isAuthenticated) {
@@ -62,7 +94,6 @@ const Settings = observer(() => {
     const fetchUserData = async () => {
       setLoading(true);
       try {
-        // Получаем данные пользователя
         const userRes = await instance.get("users/me/");
         const userData = {
           username: userRes.data.username,
@@ -73,82 +104,23 @@ const Settings = observer(() => {
         setUserProfile(userData);
         setOriginalUserProfile(userData);
 
-        // Проверяем, есть ли профиль исполнителя
-        try {
-          const artistsRes = await instance.get(
-            `artists/?user=${userRes.data.id}`
-          );
-          console.log(
-            "Ответ сервера на artists/?user=",
-            userRes.data.id,
-            artistsRes.data
-          );
-          if (artistsRes.data && artistsRes.data.length > 0) {
-            const artist = artistsRes.data[0];
-            // Проверяем, что артист действительно принадлежит текущему пользователю
-            if (
-              (artist.user && artist.user.id === userRes.data.id) ||
-              (!artist.user && artist.id) // если user отсутствует, но id есть (fallback)
-            ) {
-              const artistData = {
-                id: artist.id,
-                username: artist.username,
-                bio: artist.bio || "",
-                img_cover_url: artist.img_cover_url || "",
-                monthly_listeners: artist.monthly_listeners || 0,
-                is_verified: artist.is_verified || false,
-                user: artist.user,
-              };
-              setArtistProfile(artistData);
-              setOriginalArtistProfile(artistData);
-              // Обновляем глобальный стор
-              if (authStore.setArtistProfile)
-                authStore.setArtistProfile(artist);
-            } else {
-              // Артист не принадлежит пользователю — показываем только кнопку создания
-              const newArtistData = {
-                id: null,
-                username: userRes.data.username,
-                bio: "",
-                img_cover_url: "",
-                monthly_listeners: 0,
-                is_verified: false,
-              };
-              setArtistProfile(newArtistData);
-              setOriginalArtistProfile(newArtistData);
-              // Сбрасываем глобальный стор
-              if (authStore.setArtistProfile) authStore.setArtistProfile(null);
-            }
-          } else {
-            // Нет артиста — показываем пустую форму для создания
-            const newArtistData = {
-              id: null,
-              username: userRes.data.username,
-              bio: "",
-              img_cover_url: "",
-              monthly_listeners: 0,
-              is_verified: false,
-            };
-            setArtistProfile(newArtistData);
-            setOriginalArtistProfile(newArtistData);
-            // Сбрасываем глобальный стор
-            if (authStore.setArtistProfile) authStore.setArtistProfile(null);
-          }
-        } catch (err) {
-          console.error("Ошибка при поиске профиля исполнителя:", err);
-          // Сбрасываем глобальный стор
-          if (authStore.setArtistProfile) authStore.setArtistProfile(null);
-        }
-      } catch (err) {
-        console.error("Ошибка при загрузке данных пользователя:", err);
-        setError("Не удалось загрузить данные пользователя");
+        // Используем дебаунсированную версию для получения данных артиста
+        debouncedFetchArtistData(userRes.data.id);
+      } catch (error) {
+        setError("Ошибка при загрузке данных пользователя");
+        console.error(error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchUserData();
-  }, [navigate]);
+
+    // Очистка при размонтировании компонента
+    return () => {
+      debouncedFetchArtistData.cancel();
+    };
+  }, []);
 
   // Обработчик изменения полей профиля пользователя
   const handleUserProfileChange = (e) => {

@@ -4,10 +4,13 @@ import { getFullImageUrl } from "../utils/imageUtils";
 
 class AuthStore {
   user = null;
-  isAuthenticated = false;
   artistProfile = null;
+  isAuthenticated = false;
+  isArtist = false;
   loading = false;
   error = null;
+  lastArtistCheck = null;
+  artistCheckTimeout = 5000; // 5 секунд между проверками
 
   constructor() {
     makeAutoObservable(this, {
@@ -29,9 +32,10 @@ class AuthStore {
     this.checkAuth();
   }
 
-  setUser(user) {
+  setUser = (user) => {
     this.user = user;
-  }
+    this.isAuthenticated = !!user;
+  };
 
   setIsAuthenticated(status) {
     this.isAuthenticated = status;
@@ -45,10 +49,10 @@ class AuthStore {
     this.error = error;
   }
 
-  setArtistProfile(artistProfile) {
-    this.artistProfile = artistProfile;
-    this.checkArtistStatus();
-  }
+  setArtistProfile = (profile) => {
+    this.artistProfile = profile;
+    this.isArtist = !!profile;
+  };
 
   checkAuth = async () => {
     console.log("AuthStore.checkAuth: Проверяем аутентификацию");
@@ -110,21 +114,20 @@ class AuthStore {
   };
 
   checkArtistStatus = async () => {
-    console.log(
-      "AuthStore.checkArtistStatus: Проверяем статус артиста для пользователя",
-      this.user?.username
-    );
+    if (!this.user) {
+      console.log("AuthStore.checkArtistStatus: Нет пользователя");
+      return;
+    }
 
-    if (!this.user || !this.user.email) {
-      console.log(
-        "AuthStore.checkArtistStatus: Нет данных пользователя или email"
-      );
-      this.setArtistProfile(null);
+    console.log("AuthStore.checkArtistStatus: Проверяем статус артиста");
+
+    // Проверяем, есть ли уже данные артиста в сторе
+    if (this.artistProfile) {
+      console.log("AuthStore.checkArtistStatus: Профиль артиста уже загружен");
       return;
     }
 
     try {
-      // Ищем артиста, привязанного к текущему пользователю
       const response = await instance.get(`artists/?user=${this.user.id}`);
 
       if (response.data && response.data.length > 0) {
@@ -144,10 +147,7 @@ class AuthStore {
         });
       } else {
         console.log("AuthStore.checkArtistStatus: Артист не найден");
-        // Если артист не найден, сбрасываем профиль артиста
         this.setArtistProfile(null);
-
-        // Обновляем только URL изображения
         this.setUser({
           ...this.user,
           img_profile_url: this.user.img_profile_url
@@ -161,13 +161,11 @@ class AuthStore {
     }
   };
 
-  get isArtist() {
-    console.log(
-      "AuthStore.isArtist: Статус артиста проверен, результат:",
-      !!this.artistProfile
-    );
-    return !!this.artistProfile;
-  }
+  // Метод для принудительного обновления данных артиста
+  forceCheckArtistStatus = async () => {
+    this.lastArtistCheck = null;
+    await this.checkArtistStatus();
+  };
 
   async login(username, password) {
     console.log("AuthStore.login: Выполняем вход для пользователя", username);
