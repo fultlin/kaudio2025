@@ -1,100 +1,125 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { observer } from "mobx-react-lite";
+import searchStore from "../../stores/searchStore";
+import authStore from "../../stores/authStore";
 import styles from "./Search.module.scss";
-import homeStore from "stores/homeStore";
+import { Search as SearchIcon } from "lucide-react";
 import instance from "../../axios/axios";
 
-export default function Search({ isSidebar = false }) {
+const Search = observer(({ variant = "header" }) => {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [searchType, setSearchType] = useState("all"); // all, title, artist, username
-
-  // Состояния для расширенного поиска
-  const [searchFilters, setSearchFilters] = useState({
-    title: "",
-    artist: "",
-    album: "",
-    genre: "",
-    year: "",
-  });
+  const { user } = authStore;
+  const [showFilters, setShowFilters] = useState(false);
   const [genres, setGenres] = useState([]);
-  const [years, setYears] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [timeoutId, setTimeoutId] = useState(null);
 
-  useEffect(() => {
-    if (showAdvanced) {
-      // Загрузка жанров и годов только при открытии расширенного поиска
-      const fetchGenres = async () => {
-        try {
-          const response = await instance.get("/genres/");
-          setGenres(response.data);
-        } catch (error) {
-          console.error("Ошибка при загрузке жанров:", error);
+  const debouncedSearch = useCallback(
+    async (query, type, filters) => {
+      setLoading(true);
+      try {
+        let url;
+        switch (type.toLowerCase()) {
+          case "tracks":
+            url = "tracks/";
+            break;
+          case "albums":
+            url = "albums/";
+            break;
+          case "artists":
+            url = "artists/";
+            break;
+          default:
+            url = "tracks/";
         }
-      };
 
-      const currentYear = new Date().getFullYear();
-      const yearsList = Array.from(
-        { length: 50 },
-        (_, index) => currentYear - index
-      );
-      setYears(yearsList);
+        const params = new URLSearchParams();
+        if (query) {
+          params.append("search", query);
+        }
 
-      fetchGenres();
-    }
-  }, [showAdvanced]);
+        // Добавляем фильтры
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value) {
+            params.append(key, value);
+          }
+        });
 
-  const handleSubmit = (e) => {
+        const response = await instance.get(`${url}?${params}`);
+        if (response.status === 200) {
+          navigate(
+            `/search?q=${encodeURIComponent(query)}&type=${type.toLowerCase()}`
+          );
+        }
+      } catch (error) {
+        console.error("Ошибка при поиске:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [navigate]
+  );
+
+  const handleSearch = (e) => {
     e.preventDefault();
-    if (!searchQuery.trim()) return;
-
-    let queryParams = new URLSearchParams();
-
-    switch (searchType) {
-      case "title":
-        queryParams.append("title", searchQuery);
-        break;
-      case "artist":
-        queryParams.append("artist", searchQuery);
-        break;
-      case "username":
-        queryParams.append("username", searchQuery);
-        break;
-      case "all":
-      default:
-        queryParams.append("q", searchQuery);
-        break;
+    if (timeoutId) {
+      clearTimeout(timeoutId);
     }
-
-    navigate(`/search?${queryParams.toString()}`);
+    const newTimeoutId = setTimeout(() => {
+      debouncedSearch(
+        searchStore.searchQuery,
+        searchStore.searchType,
+        searchStore.filters
+      );
+    }, 300);
+    setTimeoutId(newTimeoutId);
   };
 
-  if (isSidebar) {
+  useEffect(() => {
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [timeoutId]);
+
+  useEffect(() => {
+    const fetchGenres = async () => {
+      try {
+        const response = await instance.get("genres/");
+        if (response.status === 200) {
+          setGenres(response.data);
+        }
+      } catch (error) {
+        console.error("Ошибка при загрузке жанров:", error);
+      }
+    };
+
+    fetchGenres();
+  }, []);
+
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    searchStore.setFilters({
+      ...searchStore.filters,
+      [name]: value,
+    });
+  };
+
+  if (variant === "sidebar") {
     return (
       <div className={styles.sidebarSearch}>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSearch}>
           <input
             type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Поиск..."
             className={styles.sidebarSearchInput}
+            placeholder="Поиск..."
+            value={searchStore.searchQuery}
+            onChange={(e) => searchStore.setSearchQuery(e.target.value)}
           />
           <button type="submit" className={styles.sidebarSearchButton}>
-            <svg
-              fill="white"
-              height="20px"
-              width="20px"
-              viewBox="0 0 488.4 488.4"
-              className={styles.searchIcon}
-            >
-              <path
-                d="M0,203.25c0,112.1,91.2,203.2,203.2,203.2c51.6,0,98.8-19.4,134.7-51.2l129.5,129.5c2.4,2.4,5.5,3.6,8.7,3.6
-                s6.3-1.2,8.7-3.6c4.8-4.8,4.8-12.5,0-17.3l-129.6-129.5c31.8-35.9,51.2-83,51.2-134.7c0-112.1-91.2-203.2-203.2-203.2
-                S0,91.15,0,203.25z M381.9,203.25c0,98.5-80.2,178.7-178.7,178.7s-178.7-80.2-178.7-178.7s80.2-178.7,178.7-178.7
-                S381.9,104.65,381.9,203.25z"
-              />
-            </svg>
+            <SearchIcon className={styles.searchIcon} />
           </button>
         </form>
       </div>
@@ -103,32 +128,87 @@ export default function Search({ isSidebar = false }) {
 
   return (
     <div className={styles.searchContainer}>
-      <form onSubmit={handleSubmit} className={styles.searchForm}>
+      <form onSubmit={handleSearch} className={styles.searchForm}>
         <div className={styles.searchTypeSelector}>
           <select
-            value={searchType}
-            onChange={(e) => setSearchType(e.target.value)}
             className={styles.searchTypeSelect}
+            value={searchStore.searchType}
+            onChange={(e) => searchStore.setSearchType(e.target.value)}
           >
-            <option value="all">Везде</option>
-            <option value="title">По названию</option>
-            <option value="artist">По исполнителю</option>
-            <option value="username">По нику</option>
+            <option value="tracks">Треки</option>
+            <option value="albums">Альбомы</option>
+            <option value="artists">Исполнители</option>
           </select>
         </div>
+
         <div className={styles.searchInputWrapper}>
           <input
             type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Что хотите послушать?"
             className={styles.searchInput}
+            placeholder="Поиск..."
+            value={searchStore.searchQuery}
+            onChange={(e) => searchStore.setSearchQuery(e.target.value)}
           />
-          <button type="submit" className={styles.searchButton}>
-            Поиск
+          <button
+            type="submit"
+            className={styles.searchButton}
+            disabled={loading}
+          >
+            {loading ? "Поиск..." : "Найти"}
           </button>
         </div>
+
+        {showFilters && (
+          <div className={styles.searchFilters}>
+            <div className={styles.filterRow}>
+              <select
+                name="genre"
+                className={styles.filterSelect}
+                value={searchStore.filters.genre || ""}
+                onChange={handleFilterChange}
+              >
+                <option value="">Все жанры</option>
+                {genres.map((genre) => (
+                  <option key={genre.id} value={genre.id}>
+                    {genre.name}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                type="text"
+                name="artist"
+                className={styles.filterInput}
+                placeholder="Исполнитель"
+                value={searchStore.filters.artist || ""}
+                onChange={handleFilterChange}
+              />
+            </div>
+
+            {searchStore.searchType === "albums" && (
+              <div className={styles.filterRow}>
+                <input
+                  type="text"
+                  name="album"
+                  className={styles.filterInput}
+                  placeholder="Название альбома"
+                  value={searchStore.filters.album || ""}
+                  onChange={handleFilterChange}
+                />
+                <input
+                  type="date"
+                  name="release_date"
+                  className={styles.filterInput}
+                  value={searchStore.filters.release_date || ""}
+                  onChange={handleFilterChange}
+                />
+              </div>
+            )}
+          </div>
+        )}
       </form>
     </div>
   );
-}
+});
+
+export default Search;

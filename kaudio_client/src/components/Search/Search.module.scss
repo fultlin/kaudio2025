@@ -9,152 +9,34 @@
   }
 }
 
-.search {
-  &__container {
-    width: 100%;
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-  }
-
-  &__form {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-  }
-
-  &__type {
-    display: flex;
-    gap: 20px;
-    justify-content: center;
-    margin-bottom: 10px;
-
-    label {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      cursor: pointer;
-      color: white;
-    }
-  }
-
-  &__fields {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
-  &__input,
-  &__select {
-    flex: 1;
-    min-width: 200px;
-    padding: 10px;
-    border: 1px solid #444;
-    border-radius: 4px;
-    background-color: #222;
-    color: white;
-
-    &::placeholder {
-      color: #888;
-    }
-
-    &:focus {
-      outline: none;
-      border-color: #666;
-    }
-  }
-
-  &__button {
-    align-self: center;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 4px;
-    background-color: #1db954;
-    cursor: pointer;
-    transition: background-color 0.2s;
-
-    &:hover {
-      background-color: #1ed760;
-    }
-  }
-
-  &__icon {
-    width: 20px;
-    height: 20px;
-  }
-}
-
-.sidebarSearch {
-  padding: 15px;
-
-  form {
-    display: flex;
-    gap: 10px;
-  }
-
-  &Input {
-    flex: 1;
-    padding: 8px 12px;
-    border: 1px solid #444;
-    border-radius: 20px;
-    background-color: #222;
-    color: white;
-    font-size: 14px;
-    max-width: 150px;
-
-    &::placeholder {
-      color: #888;
-    }
-
-    &:focus {
-      outline: none;
-      border-color: #666;
-    }
-  }
-
-  &Button {
-    background: none;
-    border: none;
-    padding: 5px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    &:hover {
-      opacity: 0.8;
-    }
-  }
-}
-
-.advancedSearchLink {
-  background: none;
-  border: none;
-  color: #888;
-  font-size: 12px;
-  padding: 5px;
-  margin-top: 5px;
-  cursor: pointer;
+.searchContainer {
   width: 100%;
-  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 5px 0;
+  background: transparent;
+  border-radius: 8px;
+  position: relative;
+}
 
-  &:hover {
-    color: white;
-    text-decoration: underline;
-  }
+.searchForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .searchTypeSelector {
-  margin-bottom: 15px;
+  margin-bottom: 5px;
 
   .searchTypeSelect {
-    padding: 8px 12px;
+    padding: 6px 10px;
     border-radius: 4px;
     background: #333;
     color: white;
     border: 1px solid #444;
-    width: 200px;
+    width: 150px;
     cursor: pointer;
+    font-size: 14px;
 
     &:focus {
       outline: none;
@@ -170,17 +52,18 @@
 
 .searchInputWrapper {
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .searchInput {
   flex: 1;
-  padding: 12px 16px;
+  padding: 8px 12px;
   border-radius: 20px;
   background: #333;
   color: white;
   border: 1px solid #444;
-  font-size: 16px;
+  font-size: 14px;
 
   &::placeholder {
     color: #888;
@@ -193,17 +76,154 @@
 }
 
 .searchButton {
-  padding: 0 24px;
+  max-width: 50%;
+  padding: 0 16px;
   border-radius: 20px;
   background: #1db954;
   color: white;
   border: none;
+  font-size: 14px;
   cursor: pointer;
-  font-weight: 600;
+  transition: background-color 0.2s;
+  margin: 0 auto;
 
   &:hover {
     background: #1ed760;
   }
+}
+
+.advancedSearchLink {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 12px;
+  padding: 4px;
+  cursor: pointer;
+  width: fit-content;
+  margin: 0 auto;
+  transition: color 0.2s;
+
+  &:hover {
+    color: white;
+    text-decoration: underline;
+  }
+}
+
+.searchFilters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: #222;
+  border-radius: 8px;
+  margin-top: 5px;
+  border: 1px solid #333;
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  min-width: 200px;
+  max-width: 100%;
+}
+
+.filterRow {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+}
+
+.filterInput,
+.filterSelect {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: #333;
+  color: white;
+  border: 1px solid #444;
+  font-size: 13px;
+  min-width: 0;
+  width: 100%;
+
+  &::placeholder {
+    color: #888;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #1db954;
+  }
+}
+
+.filterSelect {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 14px;
+  padding-right: 28px;
+  background-color: #333;
+
+  option {
+    background: #333;
+    color: white;
+    padding: 8px;
+  }
+}
+
+// Стили для сайдбара
+.sidebarSearch {
+  padding: 10px;
+
+  form {
+    display: flex;
+    gap: 8px;
+  }
+
+  &Input {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid #444;
+    border-radius: 20px;
+    background-color: #222;
+    color: white;
+    font-size: 13px;
+    max-width: 150px;
+
+    &::placeholder {
+      color: #888;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: #666;
+    }
+  }
+
+  &Button {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+}
+
+.searchIcon {
+  width: 16px;
+  height: 16px;
 }
 
 // Медиа-запросы для адаптивности

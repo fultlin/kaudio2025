@@ -390,6 +390,33 @@ class TrackViewSet(viewsets.ModelViewSet):
     serializer_class = TrackSerializer
     ordering_fields = ['release_date', 'play_count', 'likes_count', 'duration']
 
+    def get_queryset(self):
+        queryset = Track.objects.select_related('artist', 'artist__user', 'album').all()
+        
+        # Получаем параметры запроса
+        title = self.request.query_params.get('title', None)
+        artist = self.request.query_params.get('artist', None)
+        album = self.request.query_params.get('album', None)
+        genre = self.request.query_params.get('genre', None)
+        year = self.request.query_params.get('year', None)
+        
+        # Применяем фильтры
+        if title:
+            queryset = queryset.filter(title__icontains=title)
+        if artist:
+            queryset = queryset.filter(
+                Q(artist__user__username__icontains=artist) |
+                Q(artist__email__icontains=artist)
+            )
+        if album:
+            queryset = queryset.filter(album__title__icontains=album)
+        if genre:
+            queryset = queryset.filter(genres__title__icontains=genre)
+        if year:
+            queryset = queryset.filter(release_date__year=year)
+            
+        return queryset.distinct()
+
     def list(self, request, *args, **kwargs):
         search = request.query_params.get('search', '')
         print(f"\n[Search Debug] ====== НАЧАЛО ПОИСКА ТРЕКОВ ======")
@@ -399,7 +426,7 @@ class TrackViewSet(viewsets.ModelViewSet):
             return super().list(request, *args, **kwargs)
 
         # Получаем базовый queryset
-        queryset = Track.objects.select_related('artist', 'artist__user', 'album').all()
+        queryset = self.get_queryset()
         print(f"[Search Debug] Всего треков в базе: {queryset.count()}")
 
         # Поиск по нику пользователя

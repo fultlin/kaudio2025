@@ -13,6 +13,7 @@
     "axios": "^1.7.2",
     "jwt-decode": "^4.0.0",
     "jwt-encode": "^1.0.1",
+    "lucide-react": "^0.515.0",
     "mobx": "^6.13.1",
     "mobx-react-lite": "^4.0.7",
     "react": "^18.3.1",
