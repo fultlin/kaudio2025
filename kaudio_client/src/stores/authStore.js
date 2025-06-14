@@ -47,6 +47,7 @@ class AuthStore {
 
   setArtistProfile(artistProfile) {
     this.artistProfile = artistProfile;
+    this.checkArtistStatus();
   }
 
   checkAuth = async () => {
