@@ -98,13 +98,13 @@ class UserAdmin(admin.ModelAdmin):
 
 @admin.register(Artist)
 class ArtistAdmin(admin.ModelAdmin):
-    list_display = ['id', 'get_email', 'is_verified', 'monthly_listeners']
+    list_display = ['id', 'get_email', 'user', 'username', 'is_verified', 'monthly_listeners']
     list_filter = ['is_verified']
-    search_fields = ['email', 'id']
+    search_fields = ['email', 'id', 'user__username', 'username']
     readonly_fields = ['monthly_listeners']
     fieldsets = (
         (_('Основная информация'), {
-            'fields': ('email', 'cover_image', 'is_verified')
+            'fields': ('email', 'cover_image', 'is_verified', 'user', 'username')
         }),
         (_('Дополнительно'), {
             'fields': ('bio', 'monthly_listeners')

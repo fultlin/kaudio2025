@@ -27,6 +27,7 @@ from rest_framework.views import APIView
 from django.utils import timezone
 from django.http import FileResponse
 from django.db.models.functions import Lower
+from rest_framework.exceptions import PermissionDenied
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +102,30 @@ class UserViewSet(viewsets.ModelViewSet):
 class ArtistViewSet(viewsets.ModelViewSet):
     queryset = Artist.objects.all()
     serializer_class = ArtistSerializer
-    ordering_fields = ['monthly_listeners']
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['email', 'bio']
+    ordering_fields = ['monthly_listeners', 'is_verified']
+
+    def get_queryset(self):
+        queryset = Artist.objects.all()
+        user_id = self.request.query_params.get('user', None)
+        if user_id:
+            queryset = queryset.filter(user_id=user_id)
+        return queryset
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if Artist.objects.filter(user=user).exists():
+            raise PermissionDenied('У вас уже есть профиль исполнителя.')
+        serializer.save(user=user, username=user.username, email=user.email)
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        if instance.user != self.request.user:
+            raise PermissionDenied('Вы не можете редактировать чужой профиль исполнителя.')
+        # Не позволяем менять username и email артиста
+        serializer.save(username=instance.user.username, email=instance.user.email)
 
     def list(self, request, *args, **kwargs):
         search = request.query_params.get('search', '')
@@ -1041,7 +1065,7 @@ def recent_tracks(request):
         limit = 10
     
     tracks = Track.objects.all().order_by('-id')[:limit]
-    serializer = TrackSerializer(tracks, many=True)
+    serializer = TrackSerializer(tracks, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -1056,7 +1080,7 @@ def recent_albums(request):
         limit = 10
     
     albums = Album.objects.all().order_by('-id')[:limit]
-    serializer = AlbumSerializer(albums, many=True)
+    serializer = AlbumSerializer(albums, many=True, context={'request': request})
     return Response(serializer.data)
 
 

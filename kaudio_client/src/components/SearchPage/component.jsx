@@ -80,11 +80,19 @@ const SearchPage = observer(() => {
               <div key={artist.id} className={styles.artistItem}>
                 <img
                   src={artist.cover_image || "/default-artist.png"}
-                  alt={artist.user ? artist.user.username : artist.email}
+                  alt={
+                    artist.user
+                      ? artist.user.username
+                      : "Неизвестный исполнитель"
+                  }
                   className={styles.artistImage}
                 />
                 <div className={styles.artistInfo}>
-                  <h4>{artist.user ? artist.user.username : artist.email}</h4>
+                  <h4>
+                    {artist.user
+                      ? artist.user.username
+                      : "Неизвестный исполнитель"}
+                  </h4>
                   {artist.is_verified && (
                     <span className={styles.verifiedBadge}>✓</span>
                   )}

@@ -21,7 +21,7 @@ const Settings = observer(() => {
 
   const [artistProfile, setArtistProfile] = useState({
     id: null,
-    email: "",
+    username: "",
     bio: "",
     img_cover_url: "",
     monthly_listeners: 0,
@@ -30,7 +30,7 @@ const Settings = observer(() => {
 
   const [originalArtistProfile, setOriginalArtistProfile] = useState({
     id: null,
-    email: "",
+    username: "",
     bio: "",
     img_cover_url: "",
     monthly_listeners: 0,
@@ -41,6 +41,7 @@ const Settings = observer(() => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [hasArtistProfile, setHasArtistProfile] = useState(false);
+  const [showArtistForm, setShowArtistForm] = useState(false);
 
   // Refs для input file
   const profileImageInputRef = useRef(null);
@@ -76,29 +77,51 @@ const Settings = observer(() => {
         // Проверяем, есть ли профиль исполнителя
         try {
           const artistsRes = await instance.get(
-            `artists/?email=${userRes.data.email}`
+            `artists/?user=${userRes.data.id}`
           );
           if (artistsRes.data && artistsRes.data.length > 0) {
             const artist = artistsRes.data[0];
-            const artistData = {
-              id: artist.id,
-              email: artist.email,
-              bio: artist.bio || "",
-              img_cover_url: artist.img_cover_url || "",
-              monthly_listeners: artist.monthly_listeners || 0,
-              is_verified: artist.is_verified || false,
-            };
-
-            setArtistProfile(artistData);
-            setOriginalArtistProfile(artistData);
-            setHasArtistProfile(true);
+            // Проверяем, что артист действительно принадлежит текущему пользователю
+            if (
+              (artist.user && artist.user.id === userRes.data.id) ||
+              (!artist.user && artist.id) // если user отсутствует, но id есть (fallback)
+            ) {
+              const artistData = {
+                id: artist.id,
+                username: artist.username,
+                bio: artist.bio || "",
+                img_cover_url: artist.img_cover_url || "",
+                monthly_listeners: artist.monthly_listeners || 0,
+                is_verified: artist.is_verified || false,
+                user: artist.user,
+              };
+              setArtistProfile(artistData);
+              setOriginalArtistProfile(artistData);
+              setHasArtistProfile(true);
+            } else {
+              // Артист не принадлежит пользователю — показываем только кнопку создания
+              const newArtistData = {
+                id: null,
+                username: userRes.data.username,
+                bio: "",
+                img_cover_url: "",
+                monthly_listeners: 0,
+                is_verified: false,
+              };
+              setArtistProfile(newArtistData);
+              setOriginalArtistProfile(newArtistData);
+              setHasArtistProfile(false);
+            }
           } else {
-            // Предзаполняем email из профиля пользователя
+            // Нет артиста — показываем пустую форму для создания
             const newArtistData = {
-              ...artistProfile,
-              email: userRes.data.email,
+              id: null,
+              username: userRes.data.username,
+              bio: "",
+              img_cover_url: "",
+              monthly_listeners: 0,
+              is_verified: false,
             };
-
             setArtistProfile(newArtistData);
             setOriginalArtistProfile(newArtistData);
             setHasArtistProfile(false);
@@ -269,7 +292,6 @@ const Settings = observer(() => {
 
     // Проверяем изменения в существующем профиле
     return (
-      artistProfile.email !== originalArtistProfile.email ||
       artistProfile.bio !== originalArtistProfile.bio ||
       artistImagePreview !== null
     );
@@ -376,51 +398,36 @@ const Settings = observer(() => {
       if (hasArtistProfile) {
         // Обновляем существующий профиль
         response = await instance.patch(`artists/${artistProfile.id}/`, {
-          email: updatedArtistProfile.email,
           bio: updatedArtistProfile.bio,
           img_cover_url: fullImageUrl, // Отправляем полный URL на сервер
         });
-
-        // Обновляем локальное состояние
-        setArtistProfile(updatedArtistProfile);
-        setOriginalArtistProfile(updatedArtistProfile);
       } else {
         // Создаем новый профиль
         response = await instance.post("artists/", {
-          email: updatedArtistProfile.email,
           bio: updatedArtistProfile.bio,
-          monthly_listeners: 0,
-          is_verified: false,
         });
+      }
 
-        // Сохраняем ID нового исполнителя
-        const newArtistId = response.data.id;
-        const newArtistProfile = {
-          ...updatedArtistProfile,
-          id: newArtistId,
+      // После создания или обновления артиста — получаем свежий объект с вложенным user
+      const artistsRes = await instance.get(
+        `artists/?user=${authStore.user.id}`
+      );
+      if (artistsRes.data && artistsRes.data.length > 0) {
+        const artist = artistsRes.data[0];
+        const artistData = {
+          id: artist.id,
+          username: artist.username,
+          bio: artist.bio || "",
+          img_cover_url: artist.img_cover_url || "",
+          monthly_listeners: artist.monthly_listeners || 0,
+          is_verified: artist.is_verified || false,
+          user: artist.user,
         };
-
-        setArtistProfile(newArtistProfile);
-        setOriginalArtistProfile(newArtistProfile);
+        setArtistProfile(artistData);
+        setOriginalArtistProfile(artistData);
         setHasArtistProfile(true);
-
-        // Если есть новое изображение, загружаем его после создания профиля
-        if (artistImagePreview) {
-          // Ожидаем небольшую задержку перед загрузкой изображения
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          const coverUrl = await uploadArtistImage();
-
-          if (coverUrl) {
-            // Обновляем профиль с url обложки
-            const profileWithCover = {
-              ...newArtistProfile,
-              img_cover_url: coverUrl,
-            };
-
-            setArtistProfile(profileWithCover);
-            setOriginalArtistProfile(profileWithCover);
-          }
-        }
+        // Обновляем профиль артиста в authStore для других компонентов
+        if (authStore.setArtistProfile) authStore.setArtistProfile(artist);
       }
 
       setSuccess(
@@ -445,6 +452,13 @@ const Settings = observer(() => {
       if (artistImagePreview) URL.revokeObjectURL(artistImagePreview);
     };
   }, [profileImagePreview, artistImagePreview]);
+
+  // После успешного создания артиста сбрасываем showArtistForm
+  useEffect(() => {
+    if (hasArtistProfile) {
+      setShowArtistForm(false);
+    }
+  }, [hasArtistProfile]);
 
   return (
     <div className={styles.settingsContainer}>
@@ -576,136 +590,136 @@ const Settings = observer(() => {
               : "Создать профиль исполнителя"}
           </h2>
 
-          <form onSubmit={handleSaveArtistProfile}>
-            <div className={styles.formGroup}>
-              <label htmlFor="artist_email">Email исполнителя</label>
-              <input
-                type="email"
-                id="artist_email"
-                name="email"
-                value={artistProfile.email}
-                onChange={handleArtistProfileChange}
-                className={`${styles.input} ${
-                  isArtistFieldModified("email") ? styles.modified : ""
-                }`}
-                required
-                placeholder="Email для идентификации артиста"
-              />
-              <small>
-                Должен совпадать с email вашего аккаунта для привязки
-              </small>
-            </div>
-
-            <div className={styles.formGroup}>
-              <label htmlFor="bio">Биография</label>
-              <textarea
-                id="bio"
-                name="bio"
-                value={artistProfile.bio}
-                onChange={handleArtistProfileChange}
-                className={`${styles.textarea} ${
-                  isArtistFieldModified("bio") ? styles.modified : ""
-                }`}
-                rows="5"
-                placeholder="Расскажите о себе как об исполнителе..."
-              />
-            </div>
-
-            <div className={styles.formGroup}>
-              <label htmlFor="artistImage">Фото обложки исполнителя</label>
-              <div className={styles.imageUploadContainer}>
-                <div className={styles.imagePreviewWrapper}>
-                  {artistImagePreview ? (
-                    <img
-                      src={artistImagePreview}
-                      alt="Предпросмотр обложки"
-                      className={styles.previewImg}
-                    />
-                  ) : artistProfile.img_cover_url ? (
-                    <img
-                      src={getFullImageUrl(artistProfile.img_cover_url)}
-                      alt="Фото исполнителя"
-                      className={styles.previewImg}
-                    />
-                  ) : (
-                    <div className={styles.imagePlaceholder}>
-                      <span>{getAvatarInitial(userProfile.username)}</span>
-                    </div>
-                  )}
-                </div>
-                <div className={styles.imageControls}>
-                  <input
-                    type="file"
-                    id="artistImage"
-                    ref={artistImageInputRef}
-                    accept="image/*"
-                    onChange={handleArtistImageChange}
-                    className={styles.fileInput}
-                  />
-                  <label htmlFor="artistImage" className={styles.uploadButton}>
-                    Выбрать фото
-                  </label>
-                  {artistImagePreview && (
-                    <button
-                      type="button"
-                      className={styles.cancelButton}
-                      onClick={() => {
-                        URL.revokeObjectURL(artistImagePreview);
-                        setArtistImagePreview(null);
-                        artistImageInputRef.current.value = "";
-                      }}
-                    >
-                      Отменить
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {hasArtistProfile && (
-              <div className={styles.formGroup}>
-                <p className={styles.infoText}>
-                  <strong>Количество прослушиваний:</strong>{" "}
-                  {artistProfile.monthly_listeners}
-                </p>
-                <p className={styles.infoText}>
-                  <strong>Статус верификации:</strong>{" "}
-                  {artistProfile.is_verified ? "Подтвержден" : "Не подтвержден"}
-                </p>
-              </div>
-            )}
-
+          {/* Кнопка появляется только если нет артиста и не нажата форма */}
+          {!hasArtistProfile && !showArtistForm && (
             <button
-              type="submit"
               className={styles.button}
-              disabled={loading || !isArtistProfileModified()}
+              onClick={() => setShowArtistForm(true)}
+              type="button"
             >
-              {loading ? (
-                <span className={styles.loadingIndicator}>
-                  <span className={styles.loadingDot}></span>
-                  <span className={styles.loadingDot}></span>
-                  <span className={styles.loadingDot}></span>
-                </span>
-              ) : hasArtistProfile ? (
-                "Обновить профиль исполнителя"
-              ) : (
-                "Создать профиль исполнителя"
-              )}
+              Стать артистом
             </button>
-            {hasArtistProfile && !isArtistProfileModified() ? (
-              <p className={styles.infoText}>
-                Внесите изменения для обновления профиля исполнителя
-              </p>
-            ) : hasArtistProfile && isArtistProfileModified() ? (
-              <p className={styles.modifiedText}>
-                Профиль изменен. Нажмите кнопку для сохранения.
-              </p>
-            ) : (
-              <p className={styles.infoText}>
-                Создайте профиль исполнителя, чтобы загружать альбомы и треки
-              </p>
-            )}
-          </form>
+          )}
+
+          {/* Форма появляется только если есть артист или нажата кнопка */}
+          {(hasArtistProfile || showArtistForm) && (
+            <form onSubmit={handleSaveArtistProfile}>
+              <div className={styles.formGroup}>
+                <label htmlFor="bio">Биография</label>
+                <textarea
+                  id="bio"
+                  name="bio"
+                  value={artistProfile.bio}
+                  onChange={handleArtistProfileChange}
+                  className={`${styles.textarea} ${
+                    isArtistFieldModified("bio") ? styles.modified : ""
+                  }`}
+                  rows="5"
+                  placeholder="Расскажите о себе как об исполнителе..."
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="artistImage">Фото обложки исполнителя</label>
+                <div className={styles.imageUploadContainer}>
+                  <div className={styles.imagePreviewWrapper}>
+                    {artistImagePreview ? (
+                      <img
+                        src={artistImagePreview}
+                        alt="Предпросмотр обложки"
+                        className={styles.previewImg}
+                      />
+                    ) : artistProfile.img_cover_url ? (
+                      <img
+                        src={getFullImageUrl(artistProfile.img_cover_url)}
+                        alt="Фото исполнителя"
+                        className={styles.previewImg}
+                      />
+                    ) : (
+                      <div className={styles.imagePlaceholder}>
+                        <span>{getAvatarInitial(userProfile.username)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className={styles.imageControls}>
+                    <input
+                      type="file"
+                      id="artistImage"
+                      ref={artistImageInputRef}
+                      accept="image/*"
+                      onChange={handleArtistImageChange}
+                      className={styles.fileInput}
+                    />
+                    <label
+                      htmlFor="artistImage"
+                      className={styles.uploadButton}
+                    >
+                      Выбрать фото
+                    </label>
+                    {artistImagePreview && (
+                      <button
+                        type="button"
+                        className={styles.cancelButton}
+                        onClick={() => {
+                          URL.revokeObjectURL(artistImagePreview);
+                          setArtistImagePreview(null);
+                          artistImageInputRef.current.value = "";
+                        }}
+                      >
+                        Отменить
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {hasArtistProfile && (
+                <div className={styles.formGroup}>
+                  <p className={styles.infoText}>
+                    <strong>Количество прослушиваний:</strong>{" "}
+                    {artistProfile.monthly_listeners}
+                  </p>
+                  <p className={styles.infoText}>
+                    <strong>Статус верификации:</strong>{" "}
+                    {artistProfile.is_verified
+                      ? "Подтвержден"
+                      : "Не подтвержден"}
+                  </p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className={styles.button}
+                disabled={loading || !isArtistProfileModified()}
+              >
+                {loading ? (
+                  <span className={styles.loadingIndicator}>
+                    <span className={styles.loadingDot}></span>
+                    <span className={styles.loadingDot}></span>
+                    <span className={styles.loadingDot}></span>
+                  </span>
+                ) : hasArtistProfile ? (
+                  "Обновить профиль исполнителя"
+                ) : (
+                  "Создать профиль исполнителя"
+                )}
+              </button>
+              {hasArtistProfile && !isArtistProfileModified() ? (
+                <p className={styles.infoText}>
+                  Внесите изменения для обновления профиля исполнителя
+                </p>
+              ) : hasArtistProfile && isArtistProfileModified() ? (
+                <p className={styles.modifiedText}>
+                  Профиль изменен. Нажмите кнопку для сохранения.
+                </p>
+              ) : (
+                <p className={styles.infoText}>
+                  Создайте профиль исполнителя, чтобы загружать альбомы и треки
+                </p>
+              )}
+            </form>
+          )}
         </section>
       </div>
     </div>

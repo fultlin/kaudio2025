@@ -123,13 +123,10 @@ class AuthStore {
     }
 
     try {
-      // Ищем артиста с таким же email как у пользователя
-      const response = await instance.get(
-        `artists/?search=${encodeURIComponent(this.user.email)}`
-      );
+      // Ищем артиста, привязанного к текущему пользователю
+      const response = await instance.get(`artists/?user=${this.user.id}`);
 
       if (response.data && response.data.length > 0) {
-        // Если найден артист, обновляем информацию пользователя
         const artist = response.data[0];
         console.log("AuthStore.checkArtistStatus: Найден артист", artist);
 
@@ -158,10 +155,7 @@ class AuthStore {
         });
       }
     } catch (error) {
-      console.error(
-        "AuthStore.checkArtistStatus: Ошибка при проверке статуса артиста:",
-        error
-      );
+      console.error("Ошибка при проверке статуса артиста:", error);
       this.setArtistProfile(null);
     }
   };

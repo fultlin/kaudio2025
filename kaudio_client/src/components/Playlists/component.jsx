@@ -305,12 +305,12 @@ const Playlists = observer(() => {
                         </p>
                       </div>
                       <div className={styles.playlistActions}>
-                        <button
+                        {/* <button
                           onClick={() => handleEditPlaylist(playlist.id)}
                           className={styles.editButton}
                         >
                           Редактировать
-                        </button>
+                        </button> */}
                         <button
                           onClick={() => handleDeletePlaylist(playlist.id)}
                           className={styles.deleteButton}
@@ -365,7 +365,6 @@ const Playlists = observer(() => {
                         <h3 className={styles.albumTitle}>{album.title}</h3>
                         <p className={styles.albumArtist}>
                           {album.artist?.user?.username ||
-                            album.artist?.email ||
                             "Неизвестный исполнитель"}
                         </p>
                         <p className={styles.albumTracks}>

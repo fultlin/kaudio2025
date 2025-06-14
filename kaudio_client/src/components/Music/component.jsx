@@ -131,7 +131,6 @@ const Music = observer(() => {
   return (
     <div className={styles.mainContainer}>
       <div className={styles.appContent}>
-
         <div className={styles.contentArea}>
           <main className={styles.content}>
             {/* Секция: Избранные треки */}

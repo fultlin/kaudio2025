@@ -219,9 +219,7 @@ const Album = observer((props) => {
                 className={styles.artistLink}
                 onClick={(e) => e.stopPropagation()}
                 aria-label={`Перейти на страницу исполнителя ${
-                  album.artist.user?.username ||
-                  album.artist.email ||
-                  "Неизвестный исполнитель"
+                  album.artist.user?.username || "Неизвестный исполнитель"
                 }`}
               >
                 {album.artist.img_cover_url && (
@@ -234,9 +232,7 @@ const Album = observer((props) => {
                   </div>
                 )}
                 <span>
-                  {album.artist.user?.username ||
-                    album.artist.email ||
-                    "Неизвестный исполнитель"}
+                  {album.artist.user?.username || "Неизвестный исполнитель"}
                 </span>
               </Link>
             )}
@@ -333,9 +329,7 @@ const Album = observer((props) => {
             <div className={styles.trackInfo}>
               <div className={styles.trackTitle}>{track.title}</div>
               <div className={styles.trackArtist}>
-                {track.artist?.user?.username ||
-                  track.artist?.email ||
-                  "Неизвестный исполнитель"}
+                {track.artist?.user?.username || "Неизвестный исполнитель"}
               </div>
             </div>
             <div className={styles.trackDuration}>

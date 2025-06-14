@@ -40,11 +40,10 @@ const UploadForm = observer(() => {
         const userRes = await instance.get("users/me/");
         const userId = userRes.data.id;
 
-        // Получаем исполнителя по email пользователя
-        // Предполагается, что email пользователя совпадает с email исполнителя
+        // Получаем исполнителя по user пользователя
         try {
           const artistsRes = await instance.get(
-            `artists/?email=${userRes.data.email}`
+            `artists/?user=${userRes.data.id}`
           );
           if (artistsRes.data && artistsRes.data.length > 0) {
             // Исполнитель найден

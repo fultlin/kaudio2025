@@ -42,21 +42,7 @@ const Artist = observer(() => {
         const artist = artistResponse.data;
 
         // Если у артиста есть email, пытаемся найти пользователя
-        if (artist.email) {
-          try {
-            const userResponse = await axios.get(
-              `/users/?email=${artist.email}`
-            );
-            if (userResponse.data && userResponse.data.length > 0) {
-              // Нашли пользователя по email
-              artist.user = userResponse.data[0];
-              console.log("Найден пользователь для артиста:", artist.user);
-            }
-          } catch (err) {
-            console.error("Ошибка при поиске пользователя для артиста:", err);
-          }
-        }
-
+        // (Больше не ищем пользователя по email, используем только поле user)
         setArtist(artist);
 
         // Получаем альбомы артиста

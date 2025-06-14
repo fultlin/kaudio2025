@@ -139,6 +139,19 @@ const UploadTrack = observer(() => {
       return;
     }
 
+    // Проверяем, что артист действительно принадлежит текущему пользователю
+    if (
+      !authStore.artistProfile ||
+      !authStore.artistProfile.id ||
+      (authStore.artistProfile.user &&
+        authStore.artistProfile.user.id !== authStore.user.id)
+    ) {
+      setError(
+        "У вас нет собственного профиля исполнителя. Создайте его в настройках, чтобы загружать треки."
+      );
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setSuccess(null);

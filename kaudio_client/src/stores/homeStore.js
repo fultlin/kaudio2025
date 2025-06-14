@@ -58,34 +58,6 @@ class HomeStore {
     }
   }
 
-  // Функция для получения пользователя, связанного с артистом
-  async fetchArtistUser(artistEmail) {
-    if (!artistEmail) return null;
-
-    // Проверяем кэш
-    if (this.userCache[artistEmail]) {
-      return this.userCache[artistEmail];
-    }
-
-    try {
-      // Получаем пользователей по email
-      const response = await instance.get(
-        `users/?search=${encodeURIComponent(artistEmail)}`
-      );
-      if (response.data && response.data.length > 0) {
-        // Нашли пользователя
-        const user = response.data[0];
-        // Сохраняем в кэш
-        this.userCache[artistEmail] = user;
-        return user;
-      }
-      return null;
-    } catch (error) {
-      console.error("Ошибка при получении пользователя:", error);
-      return null;
-    }
-  }
-
   async setRecentTracks(tracks) {
     // Преобразуем все URL изображений в треках
     const processedTracks = [];
@@ -93,17 +65,12 @@ class HomeStore {
     for (const track of tracks) {
       let artist = track.artist;
 
-      if (artist && artist.email) {
-        // Получаем пользователя для артиста
-        const user = await this.fetchArtistUser(artist.email);
-
-        // Добавляем информацию о пользователе к артисту
+      if (artist) {
         artist = {
           ...artist,
           img_cover_url: artist.img_cover_url
             ? getFullImageUrl(artist.img_cover_url)
             : null,
-          user: user,
         };
       }
 
@@ -124,17 +91,12 @@ class HomeStore {
     for (const track of tracks) {
       let artist = track.artist;
 
-      if (artist && artist.email) {
-        // Получаем пользователя для артиста
-        const user = await this.fetchArtistUser(artist.email);
-
-        // Добавляем информацию о пользователе к артисту
+      if (artist) {
         artist = {
           ...artist,
           img_cover_url: artist.img_cover_url
             ? getFullImageUrl(artist.img_cover_url)
             : null,
-          user: user,
         };
       }
 
@@ -155,17 +117,12 @@ class HomeStore {
     for (const album of albums) {
       let artist = album.artist;
 
-      if (artist && artist.email) {
-        // Получаем пользователя для артиста
-        const user = await this.fetchArtistUser(artist.email);
-
-        // Добавляем информацию о пользователе к артисту
+      if (artist) {
         artist = {
           ...artist,
           img_cover_url: artist.img_cover_url
             ? getFullImageUrl(artist.img_cover_url)
             : null,
-          user: user,
         };
       }
 
@@ -194,23 +151,7 @@ class HomeStore {
       let artist = album.artist;
       console.log("setLikedAlbums: Информация об исполнителе:", artist);
 
-      if (artist && artist.email) {
-        console.log(
-          "setLikedAlbums: Получаем пользователя для исполнителя с email:",
-          artist.email
-        );
-        // Получаем пользователя для артиста
-        const user = await this.fetchArtistUser(artist.email);
-        console.log("setLikedAlbums: Получен пользователь:", user);
-
-        // Добавляем информацию о пользователе к артисту
-        artist = {
-          ...artist,
-          img_cover_url: artist.img_cover_url
-            ? getFullImageUrl(artist.img_cover_url)
-            : null,
-          user: user,
-        };
+      if (artist) {
         console.log(
           "setLikedAlbums: Обновленная информация об исполнителе:",
           artist
@@ -484,17 +425,12 @@ class HomeStore {
       let album = response.data;
       let artist = album.artist;
 
-      if (artist && artist.email) {
-        // Получаем пользователя для артиста
-        const user = await this.fetchArtistUser(artist.email);
-
-        // Добавляем информацию о пользователе к артисту
+      if (artist) {
         artist = {
           ...artist,
           img_cover_url: artist.img_cover_url
             ? getFullImageUrl(artist.img_cover_url)
             : null,
-          user: user,
         };
       }
 
@@ -529,17 +465,12 @@ class HomeStore {
       for (const track of response.data) {
         let artist = track.artist;
 
-        if (artist && artist.email) {
-          // Получаем пользователя для артиста
-          const user = await this.fetchArtistUser(artist.email);
-
-          // Добавляем информацию о пользователе к артисту
+        if (artist) {
           artist = {
             ...artist,
             img_cover_url: artist.img_cover_url
               ? getFullImageUrl(artist.img_cover_url)
               : null,
-            user: user,
           };
         }
 

@@ -31,11 +31,12 @@ class ArtistSerializer(serializers.ModelSerializer):
     cover_image_url = serializers.SerializerMethodField()
     img_cover_url = serializers.SerializerMethodField()  # для обратной совместимости
     user = UserSerializer(read_only=True)
+    username = serializers.CharField(read_only=True)
     
     class Meta:
         model = Artist
-        fields = ['id', 'bio', 'email', 'cover_image', 'cover_image_url', 'img_cover_url', 'is_verified', 'monthly_listeners', 'user']
-        read_only_fields = ['monthly_listeners']
+        fields = ['id', 'bio', 'email', 'cover_image', 'cover_image_url', 'img_cover_url', 'is_verified', 'monthly_listeners', 'user', 'username']
+        read_only_fields = ['monthly_listeners', 'username']
 
     def get_cover_image_url(self, obj):
         if obj.cover_image:

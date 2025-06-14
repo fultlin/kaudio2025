@@ -10,9 +10,13 @@ const Sidebar = observer(({ isOpen }) => {
   const user = authStore.user;
   const isArtist = authStore.isArtist;
 
-  // Обработчик клика по профилю пользователя
   const handleProfileClick = () => {
     navigate("/settings");
+  };
+
+  const handleLogout = () => {
+    authStore.logout();
+    navigate("/auth");
   };
 
   return (
@@ -61,6 +65,10 @@ const Sidebar = observer(({ isOpen }) => {
           <span className={styles.navIcon}>⚙️</span>
           <span>Настройки</span>
         </Link>
+        <button onClick={handleLogout} className={styles.navLink}>
+          <span className={styles.navIcon}>🚪</span>
+          <span>Выйти</span>
+        </button>
       </nav>
 
       <div className={styles.uploadWrapper}>

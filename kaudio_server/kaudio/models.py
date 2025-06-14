@@ -120,6 +120,12 @@ class Artist(models.Model):
         default=0,
         verbose_name=_('Ежемесячных слушателей')
     )
+    username = models.CharField(
+        max_length=150,
+        verbose_name=_('Имя пользователя'),
+        blank=True,
+        null=True
+    )
     
     class Meta:
         verbose_name = _('Исполнитель')
@@ -128,6 +134,11 @@ class Artist(models.Model):
     
     def __str__(self):
         return f'Исполнитель #{self.id}'
+
+    def save(self, *args, **kwargs):
+        if self.user:
+            self.username = self.user.username
+        super().save(*args, **kwargs)
 
 
 class Genre(models.Model):
