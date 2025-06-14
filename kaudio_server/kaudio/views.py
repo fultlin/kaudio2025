@@ -198,7 +198,7 @@ class ArtistViewSet(viewsets.ModelViewSet):
     def albums(self, request, pk=None):
         artist = self.get_object()
         albums = Album.objects.filter(artist=artist)
-        serializer = AlbumSerializer(albums, many=True)
+        serializer = AlbumSerializer(albums, many=True, context={'request': request})
         return Response(serializer.data)
 
     @action(detail=True, methods=['get'])

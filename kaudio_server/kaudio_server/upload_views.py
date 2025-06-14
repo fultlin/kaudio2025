@@ -121,32 +121,36 @@ class TrackUploadView(APIView):
         print(f"FILES: {request.FILES}")
         print(f"DATA: {request.data}")
         
-        title = request.data.get('title')
-        artist_id = request.data.get('artist_id')
+        # Получаем артиста только по текущему пользователю
+        artist = Artist.objects.filter(user=request.user).first()
+        if not artist:
+            print("У пользователя нет профиля исполнителя")
+            return Response({
+                'error': 'У вас нет профиля исполнителя. Сначала создайте артиста.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        # album_id и остальные поля оставляем как есть
         album_id = request.data.get('album_id')
         track_number = request.data.get('track_number')
         duration = request.data.get('duration')
         genre_ids = request.data.getlist('genre_ids') if hasattr(request.data, 'getlist') else request.data.get('genre_ids', [])
         audio_file = request.FILES.get('audio_file')
-        
-        if not all([title, artist_id, duration, audio_file]):
+        title = request.data.get('title')
+
+        if not all([title, duration, audio_file]):
             print("Не все обязательные поля заполнены")
             return Response({
                 'error': 'Не все обязательные поля заполнены'
             }, status=status.HTTP_400_BAD_REQUEST)
-        
+
         try:
-            artist = get_object_or_404(Artist, id=artist_id)
             album = None
             user = request.user
-            
             if album_id:
                 album = get_object_or_404(Album, id=album_id)
                 if not track_number:
                     return Response({
                         'error': 'При выборе альбома необходимо указать номер трека'
                     }, status=status.HTTP_400_BAD_REQUEST)
-            
             track = Track.objects.create(
                 title=title,
                 artist=artist,
@@ -188,7 +192,7 @@ class TrackUploadView(APIView):
                 added_at=timezone.now()
             )
             
-            serializer = TrackSerializer(track)
+            serializer = TrackSerializer(track, context={'request': request})
             print(f"Трек успешно создан: {track.id}")
             return Response(serializer.data, status=status.HTTP_201_CREATED)
             

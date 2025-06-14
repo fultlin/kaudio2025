@@ -40,7 +40,6 @@ const Settings = observer(() => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const [hasArtistProfile, setHasArtistProfile] = useState(false);
   const [showArtistForm, setShowArtistForm] = useState(false);
 
   // Refs для input file
@@ -79,6 +78,11 @@ const Settings = observer(() => {
           const artistsRes = await instance.get(
             `artists/?user=${userRes.data.id}`
           );
+          console.log(
+            "Ответ сервера на artists/?user=",
+            userRes.data.id,
+            artistsRes.data
+          );
           if (artistsRes.data && artistsRes.data.length > 0) {
             const artist = artistsRes.data[0];
             // Проверяем, что артист действительно принадлежит текущему пользователю
@@ -97,7 +101,9 @@ const Settings = observer(() => {
               };
               setArtistProfile(artistData);
               setOriginalArtistProfile(artistData);
-              setHasArtistProfile(true);
+              // Обновляем глобальный стор
+              if (authStore.setArtistProfile)
+                authStore.setArtistProfile(artist);
             } else {
               // Артист не принадлежит пользователю — показываем только кнопку создания
               const newArtistData = {
@@ -110,7 +116,8 @@ const Settings = observer(() => {
               };
               setArtistProfile(newArtistData);
               setOriginalArtistProfile(newArtistData);
-              setHasArtistProfile(false);
+              // Сбрасываем глобальный стор
+              if (authStore.setArtistProfile) authStore.setArtistProfile(null);
             }
           } else {
             // Нет артиста — показываем пустую форму для создания
@@ -124,11 +131,13 @@ const Settings = observer(() => {
             };
             setArtistProfile(newArtistData);
             setOriginalArtistProfile(newArtistData);
-            setHasArtistProfile(false);
+            // Сбрасываем глобальный стор
+            if (authStore.setArtistProfile) authStore.setArtistProfile(null);
           }
         } catch (err) {
           console.error("Ошибка при поиске профиля исполнителя:", err);
-          setHasArtistProfile(false);
+          // Сбрасываем глобальный стор
+          if (authStore.setArtistProfile) authStore.setArtistProfile(null);
         }
       } catch (err) {
         console.error("Ошибка при загрузке данных пользователя:", err);
@@ -288,7 +297,7 @@ const Settings = observer(() => {
 
   // Проверяем, были ли изменены данные артиста
   const isArtistProfileModified = () => {
-    if (!hasArtistProfile) return true; // Если профиля нет, то всегда разрешаем создание
+    if (!authStore.isArtist) return true; // Если профиля нет, то всегда разрешаем создание
 
     // Проверяем изменения в существующем профиле
     return (
@@ -379,7 +388,7 @@ const Settings = observer(() => {
       // Если есть новое изображение, загружаем его
       let imageUrl = artistProfile.img_cover_url;
 
-      if (hasArtistProfile && artistImagePreview) {
+      if (authStore.isArtist && artistImagePreview) {
         const uploadedImage = await uploadArtistImage();
         if (uploadedImage) {
           imageUrl = uploadedImage;
@@ -395,7 +404,7 @@ const Settings = observer(() => {
         img_cover_url: imageUrl, // Сохраняем оригинальный URL в состоянии
       };
 
-      if (hasArtistProfile) {
+      if (authStore.isArtist) {
         // Обновляем существующий профиль
         response = await instance.patch(`artists/${artistProfile.id}/`, {
           bio: updatedArtistProfile.bio,
@@ -425,13 +434,12 @@ const Settings = observer(() => {
         };
         setArtistProfile(artistData);
         setOriginalArtistProfile(artistData);
-        setHasArtistProfile(true);
-        // Обновляем профиль артиста в authStore для других компонентов
+        // Обновляем глобальный стор
         if (authStore.setArtistProfile) authStore.setArtistProfile(artist);
       }
 
       setSuccess(
-        hasArtistProfile
+        authStore.isArtist
           ? "Профиль исполнителя успешно обновлен"
           : "Профиль исполнителя успешно создан"
       );
@@ -455,10 +463,10 @@ const Settings = observer(() => {
 
   // После успешного создания артиста сбрасываем showArtistForm
   useEffect(() => {
-    if (hasArtistProfile) {
+    if (authStore.isArtist) {
       setShowArtistForm(false);
     }
-  }, [hasArtistProfile]);
+  }, [authStore.isArtist]);
 
   return (
     <div className={styles.settingsContainer}>
@@ -585,13 +593,13 @@ const Settings = observer(() => {
         {/* Секция профиля исполнителя */}
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>
-            {hasArtistProfile
+            {authStore.isArtist
               ? "Профиль исполнителя"
               : "Создать профиль исполнителя"}
           </h2>
 
           {/* Кнопка появляется только если нет артиста и не нажата форма */}
-          {!hasArtistProfile && !showArtistForm && (
+          {!authStore.isArtist && !showArtistForm && (
             <button
               className={styles.button}
               onClick={() => setShowArtistForm(true)}
@@ -602,7 +610,7 @@ const Settings = observer(() => {
           )}
 
           {/* Форма появляется только если есть артист или нажата кнопка */}
-          {(hasArtistProfile || showArtistForm) && (
+          {(authStore.isArtist || showArtistForm) && (
             <form onSubmit={handleSaveArtistProfile}>
               <div className={styles.formGroup}>
                 <label htmlFor="bio">Биография</label>
@@ -673,7 +681,7 @@ const Settings = observer(() => {
                 </div>
               </div>
 
-              {hasArtistProfile && (
+              {authStore.isArtist && (
                 <div className={styles.formGroup}>
                   <p className={styles.infoText}>
                     <strong>Количество прослушиваний:</strong>{" "}
@@ -699,17 +707,17 @@ const Settings = observer(() => {
                     <span className={styles.loadingDot}></span>
                     <span className={styles.loadingDot}></span>
                   </span>
-                ) : hasArtistProfile ? (
+                ) : authStore.isArtist ? (
                   "Обновить профиль исполнителя"
                 ) : (
                   "Создать профиль исполнителя"
                 )}
               </button>
-              {hasArtistProfile && !isArtistProfileModified() ? (
+              {authStore.isArtist && !isArtistProfileModified() ? (
                 <p className={styles.infoText}>
                   Внесите изменения для обновления профиля исполнителя
                 </p>
-              ) : hasArtistProfile && isArtistProfileModified() ? (
+              ) : authStore.isArtist && isArtistProfileModified() ? (
                 <p className={styles.modifiedText}>
                   Профиль изменен. Нажмите кнопку для сохранения.
                 </p>
