@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import (
     User, Artist, Genre, Album, Track, Playlist, UserActivity, 
     Subscribe, UserSubscribe, UserAlbum, UserTrack, PlaylistTrack,
-    AlbumGenre, TrackGenre, Statistics
+    AlbumGenre, TrackGenre, Statistics, TrackReview, AlbumReview
 )
 
 
@@ -300,4 +300,28 @@ class StatisticsSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Statistics
-        fields = ['genre_statistics_url', 'popular_tracks_url', 'top_artists_url'] 
+        fields = ['genre_statistics_url', 'popular_tracks_url', 'top_artists_url']
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    author = serializers.SerializerMethodField()
+    author_id = serializers.IntegerField(source='author.id', read_only=True)
+
+    class Meta:
+        fields = ['id', 'author', 'author_id', 'rating', 'text', 'created_at', 'updated_at']
+        read_only_fields = ['author', 'author_id', 'created_at', 'updated_at']
+
+    def get_author(self, obj):
+        return obj.author.username
+
+
+class TrackReviewSerializer(ReviewSerializer):
+    class Meta(ReviewSerializer.Meta):
+        model = TrackReview
+        fields = ReviewSerializer.Meta.fields + ['track']
+
+
+class AlbumReviewSerializer(ReviewSerializer):
+    class Meta(ReviewSerializer.Meta):
+        model = AlbumReview
+        fields = ReviewSerializer.Meta.fields + ['album'] 

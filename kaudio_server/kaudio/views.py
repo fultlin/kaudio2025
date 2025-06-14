@@ -5,14 +5,14 @@ from django.db.models import Q, Sum, Count, Avg, F
 from .models import (
     Statistics, User, Artist, Genre, Album, Track, Playlist, UserActivity,
     Subscribe, UserSubscribe, UserAlbum, UserTrack, PlaylistTrack,
-    AlbumGenre, TrackGenre
+    AlbumGenre, TrackGenre, TrackReview, AlbumReview
 )
 from .serializers import (
     StatisticsSerializer, UserSerializer, ArtistSerializer, GenreSerializer, AlbumSerializer,
     TrackSerializer, PlaylistSerializer, UserActivitySerializer,
     SubscribeSerializer, UserSubscribeSerializer, UserAlbumSerializer,
     UserTrackSerializer, PlaylistTrackSerializer, AlbumGenreSerializer,
-    TrackGenreSerializer
+    TrackGenreSerializer, TrackReviewSerializer, AlbumReviewSerializer
 )
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authtoken.models import Token
@@ -1122,4 +1122,43 @@ class StatisticsViewSet(viewsets.ViewSet):
         """
         statistics = Statistics()
         serializer = StatisticsSerializer(statistics)
-        return Response(serializer.data) 
+        return Response(serializer.data)
+
+
+class ReviewViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    
+    def get_queryset(self):
+        return self.queryset.all()
+    
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+    
+    def get_permissions(self):
+        if self.action in ['update', 'partial_update', 'destroy']:
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAuthenticatedOrReadOnly()]
+
+
+class TrackReviewViewSet(ReviewViewSet):
+    queryset = TrackReview.objects.all()
+    serializer_class = TrackReviewSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        track_id = self.request.query_params.get('track_id')
+        if track_id:
+            queryset = queryset.filter(track_id=track_id)
+        return queryset
+
+
+class AlbumReviewViewSet(ReviewViewSet):
+    queryset = AlbumReview.objects.all()
+    serializer_class = AlbumReviewSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        album_id = self.request.query_params.get('album_id')
+        if album_id:
+            queryset = queryset.filter(album_id=album_id)
+        return queryset 

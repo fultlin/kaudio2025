@@ -19,6 +19,8 @@ router.register(r'playlist-tracks', views.PlaylistTrackViewSet)
 router.register(r'album-genres', views.AlbumGenreViewSet)
 router.register(r'track-genres', views.TrackGenreViewSet)
 router.register(r'statistics', views.StatisticsViewSet, basename='statistics')
+router.register(r'track-reviews', views.TrackReviewViewSet, basename='track-review')
+router.register(r'album-reviews', views.AlbumReviewViewSet, basename='album-review')
 
 urlpatterns = [
     path('', include(router.urls)),

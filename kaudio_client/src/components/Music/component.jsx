@@ -6,6 +6,7 @@ import authStore from "../../stores/authStore";
 import MiniPlayer from "../MiniPlayer/component";
 import instance from "../../axios/axios";
 import { toJS } from "mobx";
+import { ArrowRight } from "lucide-react";
 
 import styles from "./Music.module.scss";
 import UploadIcon from "../Home/components/UploadIcon";
@@ -195,12 +196,22 @@ const Music = observer(() => {
                         <div className={styles.trackDuration}>
                           {Math.floor(track.duration / 60)}:
                           {String(track.duration % 60).padStart(2, "0")}
-                          <div
-                            className={styles.trackLike}
-                            onClick={(e) => handleLikeTrack(e, track.id)}
-                          >
-                            <span className={styles.likedIcon}>❤️</span>
-                          </div>
+                        </div>
+                        <div
+                          className={styles.trackGoTo}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/tracks/${track.id}`);
+                          }}
+                          title="Перейти на страницу трека"
+                        >
+                          <ArrowRight size={20} />
+                        </div>
+                        <div
+                          className={styles.trackLike}
+                          onClick={(e) => handleLikeTrack(e, track.id)}
+                        >
+                          <span className={styles.likedIcon}>❤️</span>
                         </div>
                       </div>
                     ))

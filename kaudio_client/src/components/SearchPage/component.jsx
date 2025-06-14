@@ -1,11 +1,12 @@
 // kaudio_client/src/components/SearchPage/component.jsx
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { observer } from "mobx-react-lite";
 import playerStore from "../../stores/playerStore";
 import instance from "../../axios/axios";
 import styles from "./SearchPage.module.scss";
 import MiniPlayer from "../MiniPlayer/component";
+import { ArrowRight } from "lucide-react";
 
 const formatDuration = (seconds) => {
   const minutes = Math.floor(seconds / 60);
@@ -19,6 +20,7 @@ const SearchPage = observer(() => {
     tracks: [],
     artists: [],
   });
+  const navigate = useNavigate();
 
   const fetchResults = async () => {
     const query = searchParams.get("q");
@@ -118,7 +120,20 @@ const SearchPage = observer(() => {
                       track.artist?.email ||
                       "Неизвестный исполнитель"}
                   </p>
-                  <p>{formatDuration(track.duration)}</p>
+                  <div className={styles.trackDuration}>
+                    {Math.floor(track.duration / 60)}:
+                    {String(track.duration % 60).padStart(2, "0")}
+                  </div>
+                </div>
+                <div
+                  className={styles.trackGoTo}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/tracks/${track.id}`);
+                  }}
+                  title="Перейти на страницу трека"
+                >
+                  <ArrowRight size={20} />
                 </div>
                 <button
                   onClick={() => handlePlayTrack(track)}

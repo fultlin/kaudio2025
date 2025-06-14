@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import instance from "../../axios/axios";
 import axios from "axios";
 import authStore from "../../stores/authStore";
+import { ArrowRight } from "lucide-react";
 
 import styles from "./Home.module.scss";
 import UploadIcon from "./components/UploadIcon";
@@ -157,7 +158,6 @@ const Home = observer(() => {
   return (
     <div className={styles.mainContainer}>
       <div className={styles.appContent}>
-
         <div className={styles.contentArea}>
           <main className={styles.content}>
             {/* Секция: Последние треки */}
@@ -207,6 +207,16 @@ const Home = observer(() => {
                         <div className={styles.trackDuration}>
                           {Math.floor(track.duration / 60)}:
                           {String(track.duration % 60).padStart(2, "0")}
+                        </div>
+                        <div
+                          className={styles.trackGoTo}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/tracks/${track.id}`);
+                          }}
+                          title="Перейти на страницу трека"
+                        >
+                          <ArrowRight size={20} />
                         </div>
                         <div
                           className={styles.trackLike}

@@ -649,3 +649,28 @@ class Statistics(models.Model):
     def top_artists_url(self):
         """URL для топ исполнителей"""
         return reverse('track-top-artists')
+
+
+class Review(models.Model):
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews')
+    rating = models.IntegerField(choices=[(i, i) for i in range(1, 6)])
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
+
+class TrackReview(Review):
+    track = models.ForeignKey('Track', on_delete=models.CASCADE, related_name='reviews')
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='track_reviews')
+
+    class Meta:
+        unique_together = ('author', 'track')
+
+class AlbumReview(Review):
+    album = models.ForeignKey('Album', on_delete=models.CASCADE, related_name='reviews')
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='album_reviews')
+
+    class Meta:
+        unique_together = ('author', 'album')

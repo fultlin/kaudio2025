@@ -400,3 +400,17 @@
     text-decoration: underline;
   }
 }
+
+.trackGoTo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 12px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: color 0.2s;
+
+  &:hover {
+    color: var(--accent-color);
+  }
+}

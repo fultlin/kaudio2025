@@ -354,6 +354,20 @@
   background-color: rgba(255, 107, 107, 0.1);
 }
 
+.trackGoTo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 12px;
+  cursor: pointer;
+  color: $text-secondary-color;
+  transition: color 0.2s;
+
+  &:hover {
+    color: $primary-color;
+  }
+}
+
 @media (max-width: 768px) {
   .albumContainer {
     padding: 20px;

@@ -17,6 +17,7 @@ import PlaylistView from "../components/Playlists/PlaylistView";
 import Artist from "../components/Artist/component";
 import StatisticsPage from "../components/Statistics";
 import SearchPage from "../components/SearchPage/component";
+import TrackPage from "../pages/TrackPage/component";
 
 const router = createBrowserRouter([
   {
@@ -87,6 +88,10 @@ const router = createBrowserRouter([
       {
         path: "search",
         element: <SearchPage />,
+      },
+      {
+        path: "tracks/:id",
+        element: <TrackPage />,
       },
     ],
   },

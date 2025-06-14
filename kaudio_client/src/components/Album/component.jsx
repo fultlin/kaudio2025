@@ -6,6 +6,7 @@ import authStore from "../../stores/authStore";
 import instance from "../../axios/axios";
 import { toJS } from "mobx";
 import styles from "./Album.module.scss";
+import { ArrowRight } from "lucide-react";
 
 const Album = observer((props) => {
   const { id } = useParams();
@@ -344,6 +345,16 @@ const Album = observer((props) => {
                   <span className={styles.unlikedIcon}>🤍</span>
                 )}
               </div>
+            </div>
+            <div
+              className={styles.trackGoTo}
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/tracks/${track.id}`);
+              }}
+              title="Перейти на страницу трека"
+            >
+              <ArrowRight size={20} />
             </div>
           </div>
         ))}
