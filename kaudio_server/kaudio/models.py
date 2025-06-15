@@ -290,9 +290,32 @@ class Track(models.Model):
         verbose_name = _('Трек')
         verbose_name_plural = _('Треки')
         ordering = ['album', 'track_number']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['title', 'album'],
+                name='unique_track_title_in_album',
+                condition=models.Q(album__isnull=False)
+            )
+        ]
     
     def __str__(self):
         return f'{self.title} - {self.artist}'
+    
+    def clean(self):
+        """Проверяет уникальность названия трека в альбоме"""
+        from django.core.exceptions import ValidationError
+        
+        if self.album:
+            # Проверяем, существует ли трек с таким же названием в альбоме
+            existing_track = Track.objects.filter(
+                album=self.album,
+                title__iexact=self.title
+            ).exclude(pk=self.pk).first()
+            
+            if existing_track:
+                raise ValidationError({
+                    'title': _('Трек с таким названием уже существует в этом альбоме')
+                })
 
 
 class Playlist(models.Model):

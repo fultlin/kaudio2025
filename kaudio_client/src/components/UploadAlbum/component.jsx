@@ -265,7 +265,21 @@ const UploadAlbum = observer(() => {
       console.error("Ошибка при создании альбома:", error);
       console.log("Детали ошибки:", error.response?.data);
       console.log("Статус ошибки:", error.response?.status);
-      setError(error.response?.data?.error || "Не удалось создать альбом");
+      // Обработка ошибки уникальности трека в альбоме
+      if (
+        (error.response?.status === 500 &&
+          String(error.response?.data).includes("UNIQUE constraint failed")) ||
+        (typeof error.response?.data?.error === "string" &&
+          error.response.data.error.includes("UNIQUE constraint failed"))
+      ) {
+        setError(
+          "В альбоме не может быть двух треков с одинаковым названием. Пожалуйста, выберите уникальные названия для каждого трека."
+        );
+      } else if (error.response?.data?.error) {
+        setError(error.response.data.error);
+      } else {
+        setError("Не удалось создать альбом");
+      }
     } finally {
       setLoading(false);
     }

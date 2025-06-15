@@ -18,6 +18,7 @@ const UploadTrack = observer(() => {
   const [coverImagePreview, setCoverImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [errorType, setErrorType] = useState(null);
   const [success, setSuccess] = useState(null);
   const [genres, setGenres] = useState([]);
   const [createAlbum, setCreateAlbum] = useState(true); // По умолчанию создаем альбом для трека
@@ -133,25 +134,6 @@ const UploadTrack = observer(() => {
   // Отправка формы
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!audioFile) {
-      setError("Пожалуйста, выберите аудиофайл");
-      return;
-    }
-
-    // Проверяем, что артист действительно принадлежит текущему пользователю
-    if (
-      !authStore.artistProfile ||
-      !authStore.artistProfile.id ||
-      (authStore.artistProfile.user &&
-        authStore.artistProfile.user.id !== authStore.user.id)
-    ) {
-      setError(
-        "У вас нет собственного профиля исполнителя. Создайте его в настройках, чтобы загружать треки."
-      );
-      return;
-    }
-
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -160,64 +142,24 @@ const UploadTrack = observer(() => {
       let albumId = null;
       let coverUrl = null;
 
-      // Создаем альбом для одиночного трека только если выбрана опция создания альбома
+      // Если выбрано создание альбома, сначала создаем его
       if (createAlbum) {
-        const singleTrackAlbumData = {
-          title: `Сингл: ${formData.title}`,
-          description: "Отдельный трек",
-          artist_id: authStore.artistProfile.id,
-          release_date: new Date().toISOString().split("T")[0], // Сегодняшняя дата в формате YYYY-MM-DD
-          total_tracks: 1,
-          total_duration: formData.duration,
-          img_url: null, // Изначально null, URL добавим после загрузки обложки
-        };
+        const albumFormData = new FormData();
+        albumFormData.append("title", formData.title);
+        albumFormData.append("description", `Сингл: ${formData.title}`);
+        albumFormData.append("artist_id", authStore.artistProfile.id);
 
-        console.log(
-          "Создание альбома для одиночного трека:",
-          singleTrackAlbumData
-        );
+        // Если есть обложка, загружаем её
+        if (coverImage) {
+          albumFormData.append("cover_image", coverImage);
+        }
+
         const albumResponse = await instance.post(
-          "albums/",
-          singleTrackAlbumData
+          "upload/album/",
+          albumFormData
         );
         albumId = albumResponse.data.id;
-
-        if (coverImage) {
-          const coverFormData = new FormData();
-          coverFormData.append("image", coverImage);
-          coverFormData.append("album_id", albumId);
-
-          try {
-            const coverResponse = await instance.post(
-              "upload/album-image/",
-              coverFormData
-            );
-            coverUrl = coverResponse.data.img_url;
-          } catch (coverError) {
-            console.error("Ошибка при загрузке обложки:", coverError);
-            // Продолжаем без обложки
-            coverUrl = authStore.artistProfile.img_cover_url || "";
-          }
-        } else {
-          coverUrl = authStore.artistProfile.img_cover_url || "";
-        }
-      } else if (coverImage) {
-        // Если альбом не создаем, но обложка выбрана, загружаем ее отдельно
-        const coverFormData = new FormData();
-        coverFormData.append("image", coverImage);
-
-        try {
-          const coverResponse = await instance.post(
-            "upload/track-image/",
-            coverFormData
-          );
-          coverUrl = coverResponse.data.img_url;
-        } catch (coverError) {
-          console.error("Ошибка при загрузке обложки трека:", coverError);
-          coverUrl = authStore.artistProfile.img_cover_url || "";
-        }
-      } else {
-        coverUrl = authStore.artistProfile.img_cover_url || "";
+        coverUrl = albumResponse.data.cover_image;
       }
 
       // Затем загружаем трек
@@ -279,8 +221,29 @@ const UploadTrack = observer(() => {
     } catch (error) {
       console.error("Ошибка при загрузке трека:", error);
       console.log("Детали ошибки:", error.response?.data);
-      console.log("Статус ошибки:", error.response?.status);
-      setError(error.response?.data?.error || "Не удалось загрузить трек");
+
+      // Обработка различных типов ошибок
+      if (
+        error.response?.status === 500 &&
+        error.response?.data?.includes("UNIQUE constraint failed")
+      ) {
+        setError(
+          "Трек с таким названием уже существует в этом альбоме. Пожалуйста, выберите другое название."
+        );
+        setErrorType("unique");
+      } else if (error.response?.data?.title) {
+        setError(`Ошибка: ${error.response.data.title.join(", ")}`);
+        setErrorType(null);
+      } else if (error.response?.data?.detail) {
+        setError(`Ошибка: ${error.response.data.detail}`);
+        setErrorType(null);
+      } else if (error.response?.data?.error) {
+        setError(`Ошибка: ${error.response.data.error}`);
+        setErrorType(null);
+      } else {
+        setError("Не удалось загрузить трек. Пожалуйста, попробуйте еще раз.");
+        setErrorType(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -297,7 +260,11 @@ const UploadTrack = observer(() => {
     <div className={styles.uploadContainer}>
       <h1 className={styles.title}>Загрузка трека</h1>
 
-      {error && <div className={styles.error}>{error}</div>}
+      {error && (
+        <div className={styles.error} data-type={errorType}>
+          {error}
+        </div>
+      )}
       {success && <div className={styles.success}>{success}</div>}
 
       <form onSubmit={handleSubmit} className={styles.uploadForm}>

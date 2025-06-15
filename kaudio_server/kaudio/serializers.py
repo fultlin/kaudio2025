@@ -4,6 +4,7 @@ from .models import (
     Subscribe, UserSubscribe, UserAlbum, UserTrack, PlaylistTrack,
     AlbumGenre, TrackGenre, Statistics, TrackReview, AlbumReview
 )
+from django.utils.translation import gettext_lazy as _
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -97,15 +98,35 @@ class TrackSerializer(serializers.ModelSerializer):
         allow_null=True
     )
     genres = GenreSerializer(many=True, read_only=True)
-
+    
     class Meta:
         model = Track
         fields = [
             'id', 'title', 'artist', 'artist_id', 'album', 'album_id',
-            'track_number', 'release_date', 'cover_image', 'duration', 
-            'play_count', 'likes_count', 'is_explicit', 'lyrics', 'genres'
+            'audio_file', 'track_number', 'release_date', 'cover_image',
+            'duration', 'play_count', 'likes_count', 'is_explicit',
+            'lyrics', 'genres'
         ]
         read_only_fields = ['play_count', 'likes_count']
+    
+    def validate(self, data):
+        """Проверяет уникальность названия трека в альбоме"""
+        title = data.get('title')
+        album = data.get('album')
+        
+        if album and title:
+            # Проверяем, существует ли трек с таким же названием в альбоме
+            existing_track = Track.objects.filter(
+                album=album,
+                title__iexact=title
+            ).exclude(pk=self.instance.pk if self.instance else None).first()
+            
+            if existing_track:
+                raise serializers.ValidationError({
+                    'title': _('Трек с таким названием уже существует в этом альбоме')
+                })
+        
+        return data
 
 
 class PlaylistSerializer(serializers.ModelSerializer):
