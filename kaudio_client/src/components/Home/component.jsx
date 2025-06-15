@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import instance from "../../axios/axios";
 import axios from "axios";
 import authStore from "../../stores/authStore";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Search, Filter } from "lucide-react";
 
 import styles from "./Home.module.scss";
 import UploadIcon from "./components/UploadIcon";
@@ -20,6 +20,12 @@ const Home = observer(() => {
   const [trackName, setTrackName] = useState("");
   const [author, setAuthor] = useState("");
   const [activeTrackId, setActiveTrackId] = useState(null);
+
+  // Новые состояния для фильтрации и сортировки
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
+  const [filterGenre, setFilterGenre] = useState("all");
+  const [genres, setGenres] = useState([]);
 
   const recentTracks = toJS(homeStore.recentTracks) || [];
   const recentAlbums = toJS(homeStore.recentAlbums) || [];
@@ -36,7 +42,19 @@ const Home = observer(() => {
     if (authStore.isAuthenticated) {
       homeStore.fetchLikedTracks();
     }
+    // Загружаем список жанров
+    fetchGenres();
   }, []);
+
+  // Функция для загрузки жанров
+  const fetchGenres = async () => {
+    try {
+      const response = await instance.get("genres/");
+      setGenres(response.data);
+    } catch (error) {
+      console.error("Ошибка при загрузке жанров:", error);
+    }
+  };
 
   // Проверка, лайкнут ли трек
   const isTrackLiked = (trackId) => {
@@ -155,11 +173,135 @@ const Home = observer(() => {
     navigate("/settings");
   };
 
+  // Функция для фильтрации и сортировки треков
+  const getFilteredAndSortedTracks = () => {
+    let filtered = [...recentTracks];
+
+    // Фильтрация по поисковому запросу
+    if (searchQuery) {
+      filtered = filtered.filter(
+        (track) =>
+          track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (track.artist?.user?.username || track.artist?.email || "")
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Фильтрация по жанру
+    if (filterGenre !== "all") {
+      filtered = filtered.filter((track) =>
+        track.genres.some((genre) => genre.id === parseInt(filterGenre))
+      );
+    }
+
+    // Сортировка
+    switch (sortBy) {
+      case "newest":
+        filtered.sort(
+          (a, b) => new Date(b.created_at) - new Date(a.created_at)
+        );
+        break;
+      case "oldest":
+        filtered.sort(
+          (a, b) => new Date(a.created_at) - new Date(b.created_at)
+        );
+        break;
+      case "name":
+        filtered.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case "popular":
+        filtered.sort((a, b) => (b.plays || 0) - (a.plays || 0));
+        break;
+      default:
+        break;
+    }
+
+    return filtered;
+  };
+
+  // Функция для фильтрации и сортировки альбомов
+  const getFilteredAndSortedAlbums = () => {
+    let filtered = [...recentAlbums];
+
+    // Фильтрация по поисковому запросу
+    if (searchQuery) {
+      filtered = filtered.filter(
+        (album) =>
+          album.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (album.artist?.user?.username || album.artist?.email || "")
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Фильтрация по жанру
+    if (filterGenre !== "all") {
+      filtered = filtered.filter((album) =>
+        album.genres.some((genre) => genre.id === parseInt(filterGenre))
+      );
+    }
+
+    // Сортировка
+    switch (sortBy) {
+      case "newest":
+        filtered.sort(
+          (a, b) => new Date(b.created_at) - new Date(a.created_at)
+        );
+        break;
+      case "oldest":
+        filtered.sort(
+          (a, b) => new Date(a.created_at) - new Date(b.created_at)
+        );
+        break;
+      case "name":
+        filtered.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case "popular":
+        filtered.sort((a, b) => (b.plays || 0) - (a.plays || 0));
+        break;
+      default:
+        break;
+    }
+
+    return filtered;
+  };
+
   return (
     <div className={styles.mainContainer}>
       <div className={styles.appContent}>
         <div className={styles.contentArea}>
           <main className={styles.content}>
+            {/* Фильтры и сортировка */}
+            <div className={styles.filtersContainer}>
+
+              <div className={styles.filterControls}>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className={styles.filterSelect}
+                >
+                  <option value="newest">Сначала новые</option>
+                  <option value="oldest">Сначала старые</option>
+                  <option value="name">По названию</option>
+                  <option value="popular">По популярности</option>
+                </select>
+
+                <select
+                  value={filterGenre}
+                  onChange={(e) => setFilterGenre(e.target.value)}
+                  className={styles.filterSelect}
+                >
+                  <option value="all">Все жанры</option>
+                  {genres.map((genre) => (
+                    <option key={genre.id} value={genre.id}>
+                      {genre.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             {/* Секция: Последние треки */}
             <section className={styles.section}>
               <h2>Последние треки</h2>
@@ -169,8 +311,8 @@ const Home = observer(() => {
                 <div className={styles.error}>{error}</div>
               ) : (
                 <div className={styles.trackList}>
-                  {recentTracks.length > 0 ? (
-                    recentTracks.map((track, index) => (
+                  {getFilteredAndSortedTracks().length > 0 ? (
+                    getFilteredAndSortedTracks().map((track, index) => (
                       <div
                         key={track.id}
                         onClick={() => handlePlayAPITrack(track, index)}
@@ -248,8 +390,8 @@ const Home = observer(() => {
                 <div className={styles.error}>{error}</div>
               ) : (
                 <div className={styles.albumsGrid}>
-                  {recentAlbums.length > 0 ? (
-                    recentAlbums.map((album) => (
+                  {getFilteredAndSortedAlbums().length > 0 ? (
+                    getFilteredAndSortedAlbums().map((album) => (
                       <div
                         key={album.id}
                         className={styles.albumCard}
