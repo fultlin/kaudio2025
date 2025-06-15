@@ -22,6 +22,7 @@ import AlbumPage from "../pages/AlbumPage/component";
 import EditTrackPage from "../pages/EditTrackPage/component";
 import EditAlbumPage from "../pages/EditAlbumPage/component";
 import UserManagement from "../components/UserManagement/component";
+import AnalyticsPage from "../pages/AnalyticsPage/component";
 
 const router = createBrowserRouter([
   {
@@ -116,6 +117,10 @@ const router = createBrowserRouter([
       {
         path: "admin/users",
         element: <UserManagement />,
+      },
+      {
+        path: "analytics",
+        element: <AnalyticsPage />,
       },
     ],
   },

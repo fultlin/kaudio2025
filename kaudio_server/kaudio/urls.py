@@ -32,4 +32,6 @@ urlpatterns = [
     
     path('recent/tracks/', views.recent_tracks, name='recent_tracks'),
     path('recent/albums/', views.recent_albums, name='recent_albums'),
+    path("analytics/tracks/", views.get_tracks_analytics, name="tracks-analytics"),
+    path("analytics/activity/", views.get_user_activity, name="user-activity"),
 ]

@@ -14,7 +14,7 @@ from .serializers import (
     UserTrackSerializer, PlaylistTrackSerializer, AlbumGenreSerializer,
     TrackGenreSerializer, TrackReviewSerializer, AlbumReviewSerializer
 )
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
@@ -28,6 +28,9 @@ from django.utils import timezone
 from django.http import FileResponse
 from django.db.models.functions import Lower
 from rest_framework.exceptions import PermissionDenied
+from datetime import timedelta
+from django.db.models import Count
+from django.db.models.functions import TruncDate
 
 logger = logging.getLogger(__name__)
 
@@ -1162,3 +1165,96 @@ class AlbumReviewViewSet(ReviewViewSet):
         if album_id:
             queryset = queryset.filter(album_id=album_id)
         return queryset 
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_tracks_analytics(request):
+    time_range = request.GET.get("time_range", "week")
+    now = timezone.now()
+
+    if time_range == "week":
+        start_date = now - timedelta(days=7)
+    elif time_range == "month":
+        start_date = now - timedelta(days=30)
+    else:  # year
+        start_date = now - timedelta(days=365)
+
+    tracks = Track.objects.filter(
+        release_date__gte=start_date
+    ).annotate(
+        total_plays=Count("user_activities", filter=Q(user_activities__activity_type="play")),
+        avg_rating=Avg("reviews__rating"),
+        review_count=Count("reviews")
+    ).order_by("-total_plays")[:10]
+
+    data = [
+        {
+            "title": track.title,
+            "play_count": track.total_plays,
+            "avg_rating": round(track.avg_rating, 2) if track.avg_rating else 0,
+            "review_count": track.review_count,
+            "artist": track.artist.user.username if track.artist else "Неизвестный исполнитель"
+        }
+        for track in tracks
+    ]
+
+    return Response(data)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_user_activity(request):
+    time_range = request.GET.get("time_range", "week")
+    now = timezone.now()
+
+    if time_range == "week":
+        start_date = now - timedelta(days=7)
+        interval = "day"
+    elif time_range == "month":
+        start_date = now - timedelta(days=30)
+        interval = "day"
+    else:  # year
+        start_date = now - timedelta(days=365)
+        interval = "month"
+
+    # Получаем активных пользователей
+    active_users = User.objects.filter(
+        last_login__gte=start_date
+    ).annotate(
+        date=TruncDate("last_login")
+    ).values("date").annotate(
+        count=Count("id")
+    ).order_by("date")
+
+    # Получаем новых пользователей
+    new_users = User.objects.filter(
+        date_joined__gte=start_date
+    ).annotate(
+        date=TruncDate("date_joined")
+    ).values("date").annotate(
+        count=Count("id")
+    ).order_by("date")
+
+    # Объединяем данные
+    dates = set()
+    for item in active_users:
+        dates.add(item["date"])
+    for item in new_users:
+        dates.add(item["date"])
+
+    data = []
+    for date in sorted(dates):
+        active_count = next(
+            (item["count"] for item in active_users if item["date"] == date),
+            0
+        )
+        new_count = next(
+            (item["count"] for item in new_users if item["date"] == date),
+            0
+        )
+        data.append({
+            "date": date,
+            "active_users": active_count,
+            "new_users": new_count
+        })
+
+    return Response(data) 
