@@ -1,5 +1,5 @@
 import { observer } from "mobx-react-lite";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import instance from "../../axios/axios";
 import styles from "./EditTrackPage.module.scss";
@@ -52,6 +52,7 @@ const darkSelectStyles = {
 const EditTrackPage = observer(() => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [track, setTrack] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -116,7 +117,8 @@ const EditTrackPage = observer(() => {
     e.preventDefault();
     try {
       await instance.put(`tracks/${id}/`, formData);
-      navigate(`/tracks/${id}`);
+      const from = location.state?.from;
+      navigate(from || `/tracks/${id}`);
     } catch (err) {
       setError("Не удалось обновить трек");
       console.error("Ошибка при обновлении трека:", err);

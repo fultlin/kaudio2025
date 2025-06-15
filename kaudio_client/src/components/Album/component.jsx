@@ -1,6 +1,6 @@
 import { observer } from "mobx-react-lite";
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import homeStore from "../../stores/homeStore";
 import authStore from "../../stores/authStore";
 import instance from "../../axios/axios";
@@ -11,6 +11,8 @@ import { ArrowRight } from "lucide-react";
 const Album = observer((props) => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = authStore;
 
   const [album, setAlbum] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -60,9 +62,27 @@ const Album = observer((props) => {
         setIsAlbumLiked(albumLiked);
 
         // Получаем треки альбома
-        const albumTracks = await homeStore.fetchAlbumTracks(id);
-
-        // Обновляем треки в родительском компоненте
+        let albumTracks = [];
+        if (Array.isArray(albumData.tracks) && albumData.tracks.length > 0) {
+          albumTracks = albumData.tracks;
+        } else {
+          // Делаем отдельный запрос на /tracks/?album_id={id}
+          try {
+            const response = await instance.get(`tracks/?album_id=${id}`);
+            // Фильтруем только треки этого альбома
+            albumTracks = Array.isArray(response.data)
+              ? response.data.filter(
+                  (track) =>
+                    track.album &&
+                    (track.album.id === Number(id) ||
+                      track.album === Number(id))
+                )
+              : [];
+          } catch (err) {
+            console.error("Ошибка при загрузке треков альбома:", err);
+            albumTracks = [];
+          }
+        }
         setTracks(albumTracks);
 
         // Для каждого трека определяем, лайкнут ли он
@@ -289,6 +309,20 @@ const Album = observer((props) => {
                 </span>
               )}
             </button>
+
+            {user?.role === "admin" && (
+              <button
+                className={styles.editButton}
+                onClick={() =>
+                  navigate(`/albums/${album.id}/edit`, {
+                    state: { from: location.pathname },
+                  })
+                }
+                style={{ marginLeft: 16 }}
+              >
+                Редактировать
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -311,53 +345,61 @@ const Album = observer((props) => {
           </div>
         </div>
 
-        {tracks.map((track, index) => (
-          <div
-            key={track.id}
-            onClick={() => handlePlayAPITrack(track, index)}
-            className={`${styles.trackItem} ${
-              activeTrackId === track.id ? styles.activeTrack : ""
-            }`}
-          >
-            <div className={styles.trackNumber}>{index + 1}</div>
-            <div className={styles.trackPlayButton}>
-              {activeTrackId === track.id && isPlaying ? (
-                <span className={styles.pauseIcon}>❚❚</span>
-              ) : (
-                <span className={styles.playIcon}>▶</span>
-              )}
-            </div>
-            <div className={styles.trackInfo}>
-              <div className={styles.trackTitle}>{track.title}</div>
-              <div className={styles.trackArtist}>
-                {track.artist?.user?.username || "Неизвестный исполнитель"}
-              </div>
-            </div>
-            <div className={styles.trackDuration}>
-              {formatDuration(track.duration)}
-              <div
-                className={styles.trackLike}
-                onClick={(e) => handleLikeTrack(e, track.id)}
-              >
-                {trackLikes[track.id] ? (
-                  <span className={styles.likedIcon}>❤️</span>
+        {tracks.length === 0 ? (
+          <div className={styles.error} style={{ margin: 24 }}>
+            В этом альбоме пока нет треков
+          </div>
+        ) : (
+          tracks.map((track, index) => (
+            <div
+              key={track.id}
+              onClick={() => handlePlayAPITrack(track, index)}
+              className={`${styles.trackItem} ${
+                activeTrackId === track.id ? styles.activeTrack : ""
+              }`}
+            >
+              <div className={styles.trackNumber}>{index + 1}</div>
+              <div className={styles.trackPlayButton}>
+                {activeTrackId === track.id && isPlaying ? (
+                  <span className={styles.pauseIcon}>❚❚</span>
                 ) : (
-                  <span className={styles.unlikedIcon}>🤍</span>
+                  <span className={styles.playIcon}>▶</span>
                 )}
               </div>
+              <div className={styles.trackInfo}>
+                <div className={styles.trackTitle}>{track.title}</div>
+                <div className={styles.trackArtist}>
+                  {track.artist?.user?.username || "Неизвестный исполнитель"}
+                </div>
+              </div>
+              <div className={styles.trackDuration}>
+                {formatDuration(track.duration)}
+                <div
+                  className={styles.trackLike}
+                  onClick={(e) => handleLikeTrack(e, track.id)}
+                >
+                  {trackLikes[track.id] ? (
+                    <span className={styles.likedIcon}>❤️</span>
+                  ) : (
+                    <span className={styles.unlikedIcon}>🤍</span>
+                  )}
+                </div>
+              </div>
+              <div
+                className={styles.trackGoTo}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/tracks/${track.id}`, {
+                    state: { from: location.pathname },
+                  });
+                }}
+                title="Перейти на страницу трека"
+              >
+                <ArrowRight size={20} />
+              </div>
             </div>
-            <div
-              className={styles.trackGoTo}
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/tracks/${track.id}`);
-              }}
-              title="Перейти на страницу трека"
-            >
-              <ArrowRight size={20} />
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );
