@@ -1,3 +1,5 @@
+@import "../../variables.scss";
+
 .send__button {
   color: $text-color;
   font-size: 20px;
@@ -10,264 +12,182 @@
 }
 
 .searchContainer {
+  position: relative;
   width: 100%;
   max-width: 600px;
   margin: 0 auto;
-  padding: 5px 0;
-  background: transparent;
-  border-radius: 8px;
-  position: relative;
+
+  &.header {
+    max-width: 400px;
+  }
 }
 
 .searchForm {
+  width: 100%;
+}
+
+.searchInputContainer {
+  position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.searchTypeSelector {
-  margin-bottom: 5px;
-
-  .searchTypeSelect {
-    padding: 6px 10px;
-    border-radius: 4px;
-    background: #333;
-    color: white;
-    border: 1px solid #444;
-    width: 150px;
-    cursor: pointer;
-    font-size: 14px;
-    display: block;
-    margin: 0 auto;
-
-    &:focus {
-      outline: none;
-      border-color: #1db954;
-    }
-
-    option {
-      background: #333;
-      color: white;
-    }
-  }
-}
-
-.searchInputWrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.searchInput {
-  flex: 1;
-  padding: 8px 12px;
-  border-radius: 20px;
-  background: #333;
-  color: white;
-  border: 1px solid #444;
-  font-size: 14px;
-
-  &::placeholder {
-    color: #888;
-  }
-
-  &:focus {
-    outline: none;
-    border-color: #1db954;
-  }
-}
-
-.searchButton {
-  max-width: 50%;
-  padding: 0 16px;
-  border-radius: 20px;
-  background: #1db954;
-  color: white;
-  border: none;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  margin: 0 auto;
-
-  &:hover {
-    background: #1ed760;
-  }
-}
-
-.advancedSearchLink {
-  background: none;
-  border: none;
-  color: #888;
-  font-size: 12px;
-  padding: 4px;
-  cursor: pointer;
-  width: fit-content;
-  margin: 0 auto;
-  transition: color 0.2s;
-
-  &:hover {
-    color: white;
-    text-decoration: underline;
-  }
-}
-
-.searchFilters {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  background: #222;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  margin-top: 5px;
-  border: 1px solid #333;
-  position: absolute;
-  top: calc(100% + 5px);
-  left: 0;
-  right: 0;
-  z-index: 1000;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  min-width: 200px;
-  max-width: 100%;
-}
+  padding: 8px 16px;
+  transition: all 0.3s ease;
 
-.filterRow {
-  display: flex;
-  gap: 8px;
-  width: 100%;
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-  }
-}
-
-.filterInput,
-.filterSelect {
-  flex: 1;
-  padding: 6px 10px;
-  border-radius: 4px;
-  background: #333;
-  color: white;
-  border: 1px solid #444;
-  font-size: 13px;
-  min-width: 0;
-  width: 100%;
-
-  &::placeholder {
-    color: #888;
-  }
-
-  &:focus {
-    outline: none;
-    border-color: #1db954;
-  }
-}
-
-.filterSelect {
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: right 8px center;
-  background-size: 14px;
-  padding-right: 28px;
-  background-color: #333;
-
-  option {
-    background: #333;
-    color: white;
-    padding: 8px;
-  }
-}
-
-// Стили для сайдбара
-.sidebarSearch {
-  padding: 10px;
-
-  form {
-    display: flex;
-    gap: 8px;
-  }
-
-  &Input {
-    flex: 1;
-    padding: 6px 10px;
-    border: 1px solid #444;
-    border-radius: 20px;
-    background-color: #222;
-    color: white;
-    font-size: 13px;
-    max-width: 150px;
-
-    &::placeholder {
-      color: #888;
-    }
-
-    &:focus {
-      outline: none;
-      border-color: #666;
-    }
-  }
-
-  &Button {
-    background: none;
-    border: none;
-    padding: 4px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    &:hover {
-      opacity: 0.8;
-    }
+  &:focus-within {
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 0 2px rgba($primary-color, 0.3);
   }
 }
 
 .searchIcon {
-  width: 16px;
-  height: 16px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-right: 8px;
+  width: 20px;
+  height: 20px;
 }
 
-// Медиа-запросы для адаптивности
+.searchInput {
+  flex: 1;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 16px;
+  padding: 8px 0;
+  outline: none;
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+.filterButton {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  padding: 8px;
+  transition: color 0.3s ease;
+
+  &:hover {
+    color: $primary-color;
+  }
+}
+
+.filtersPanel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+}
+
+.filterGroup {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.filterInput,
+.filterSelect {
+  width: 100%;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: white;
+  font-size: 14px;
+  transition: all 0.3s ease;
+
+  &:focus {
+    outline: none;
+    border-color: $primary-color;
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  cursor: pointer;
+
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+}
+
+.filterActions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.applyButton,
+.resetButton {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.applyButton {
+  background: $primary-color;
+  color: white;
+  border: none;
+
+  &:hover {
+    background: darken($primary-color, 10%);
+  }
+}
+
+.resetButton {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+}
+
 @media (max-width: 768px) {
-  .searchInputWrapper {
-    flex-direction: column;
-    gap: 8px;
+  .searchContainer {
+    max-width: 100%;
   }
 
-  .searchInput {
-    font-size: 14px;
-    padding: 10px 14px;
+  .filterGroup {
+    grid-template-columns: 1fr;
   }
 
-  .searchButton {
-    width: 100%;
-    padding: 10px 0;
-  }
-
-  .searchTypeSelector {
-    .searchTypeSelect {
-      width: 100%;
-    }
-  }
-
-  .searchResults {
-    max-height: 250px;
-  }
-}
-
-@media (max-width: 480px) {
-  .searchInput {
-    font-size: 13px;
-    padding: 8px 12px;
-  }
-
-  .searchResults {
-    max-height: 200px;
-  }
-
-  .resultItem {
-    padding: 8px;
-    font-size: 13px;
+  .filtersPanel {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    max-height: 80vh;
+    overflow-y: auto;
   }
 }

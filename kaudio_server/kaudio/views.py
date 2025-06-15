@@ -33,6 +33,8 @@ from django.db.models import Count
 from django.db.models.functions import TruncDate
 from django.db import connection
 import time
+from .filters import TrackFilter, AlbumFilter, ArtistFilter, PlaylistFilter, UserActivityFilter
+import django_filters.rest_framework
 
 logger = logging.getLogger(__name__)
 
@@ -157,8 +159,9 @@ class ArtistViewSet(viewsets.ModelViewSet):
     queryset = Artist.objects.all()
     serializer_class = ArtistSerializer
     permission_classes = [IsAuthenticated]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['email', 'bio']
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter, django_filters.rest_framework.DjangoFilterBackend]
+    filterset_class = ArtistFilter
+    search_fields = ['email', 'bio', 'user__username']
     ordering_fields = ['monthly_listeners', 'is_verified']
 
     def get_queryset(self):
@@ -288,8 +291,9 @@ class GenreViewSet(viewsets.ModelViewSet):
 class AlbumViewSet(viewsets.ModelViewSet):
     queryset = Album.objects.all()
     serializer_class = AlbumSerializer
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['title', 'artist__email']
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter, django_filters.rest_framework.DjangoFilterBackend]
+    filterset_class = AlbumFilter
+    search_fields = ['title', 'artist__user__username']
     ordering_fields = ['release_date', 'total_tracks', 'total_duration']
 
     def get_queryset(self):
@@ -306,7 +310,7 @@ class AlbumViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(title__icontains=title)
         if artist:
             queryset = queryset.filter(
-                Q(artist__email__icontains=artist) | 
+                Q(artist__user__username__icontains=artist) | 
                 Q(artist__bio__icontains=artist)
             )
         if genre:
@@ -442,7 +446,10 @@ class AlbumViewSet(viewsets.ModelViewSet):
 class TrackViewSet(viewsets.ModelViewSet):
     queryset = Track.objects.all()
     serializer_class = TrackSerializer
-    ordering_fields = ['release_date', 'play_count', 'likes_count', 'duration']
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter, django_filters.rest_framework.DjangoFilterBackend]
+    filterset_class = TrackFilter
+    search_fields = ['title', 'artist__user__username', 'album__title']
+    ordering_fields = ['release_date', 'play_count', 'likes_count', 'duration', 'avg_rating']
 
     @log_query_performance
     def get_queryset(self):
@@ -460,78 +467,17 @@ class TrackViewSet(viewsets.ModelViewSet):
             total_plays=Count('user_activities', filter=Q(user_activities__activity_type='play'))
         )
         
-        # Получаем параметры запроса
-        title = self.request.query_params.get('title', None)
-        artist = self.request.query_params.get('artist', None)
-        album = self.request.query_params.get('album', None)
-        genre = self.request.query_params.get('genre', None)
-        year = self.request.query_params.get('year', None)
-        
-        # Применяем фильтры
-        if title:
-            queryset = queryset.filter(title__icontains=title)
-        if artist:
-            queryset = queryset.filter(
-                Q(artist__user__username__icontains=artist) |
-                Q(artist__email__icontains=artist)
-            )
-        if album:
-            queryset = queryset.filter(album__title__icontains=album)
-        if genre:
-            queryset = queryset.filter(genres__title__icontains=genre)
-        if year:
-            queryset = queryset.filter(release_date__year=year)
-        
         logger.info(f"TrackViewSet: Найдено {queryset.count()} треков")
         return queryset.distinct()
 
     def list(self, request, *args, **kwargs):
         search = request.query_params.get('search', '')
-        print(f"\n[Search Debug] ====== НАЧАЛО ПОИСКА ТРЕКОВ ======")
-        print(f"[Search Debug] Поисковый запрос: '{search}'")
         
         if not search:
             return super().list(request, *args, **kwargs)
 
-        # Получаем базовый queryset
-        queryset = self.get_queryset()
-        print(f"[Search Debug] Всего треков в базе: {queryset.count()}")
+        queryset = self.filter_queryset(self.get_queryset()) 
 
-        # Поиск по нику пользователя
-        user_tracks = queryset.filter(artist__user__username__icontains=search)
-        print(f"[Search Debug] Найдено треков по нику пользователя: {user_tracks.count()}")
-        
-        # Используем values() для логирования
-        user_tracks_info = user_tracks.values('title', 'artist__user__username', 'artist__email')
-        for track in user_tracks_info:
-            print(f"[Search Debug] Трек по нику: {track['title']} | Артист: username={track['artist__user__username']}")
-
-        # Поиск по email артиста
-        email_tracks = queryset.filter(artist__email__icontains=search)
-        print(f"[Search Debug] Найдено треков по email артиста: {email_tracks.count()}")
-        
-        # Используем values() для логирования
-        email_tracks_info = email_tracks.values('title', 'artist__email')
-        for track in email_tracks_info:
-            print(f"[Search Debug] Трек по email: {track['title']} | Артист: email={track['artist__email']}")
-
-        # Поиск по названию трека
-        title_tracks = queryset.filter(title__icontains=search)
-        print(f"[Search Debug] Найдено по названию трека: {title_tracks.count()}")
-        
-        # Используем values() для логирования
-        title_tracks_info = title_tracks.values('title')
-        for track in title_tracks_info:
-            print(f"[Search Debug] Трек по названию: {track['title']}")
-
-        # Объединяем все результаты
-        queryset = user_tracks | email_tracks | title_tracks
-        queryset = queryset.distinct()
-        
-        # Выводим итоговые результаты
-        print(f"[Search Debug] Всего уникальных результатов: {queryset.count()}")
-        
-        # Используем values() для итогового логирования
         results_info = queryset.values('title', 'artist__user__username', 'artist__email')
         for track in results_info:
             artist_info = f"username={track['artist__user__username'] or 'None'}, email={track['artist__email'] or 'None'}"
@@ -706,7 +652,8 @@ class TrackViewSet(viewsets.ModelViewSet):
 class PlaylistViewSet(viewsets.ModelViewSet):
     queryset = Playlist.objects.all()
     serializer_class = PlaylistSerializer
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter, django_filters.rest_framework.DjangoFilterBackend]
+    filterset_class = PlaylistFilter
     search_fields = ['title', 'user__username']
     ordering_fields = ['creation_date', 'total_tracks', 'total_duration']
 
@@ -831,7 +778,8 @@ class PlaylistViewSet(viewsets.ModelViewSet):
 class UserActivityViewSet(viewsets.ModelViewSet):
     queryset = UserActivity.objects.all()
     serializer_class = UserActivitySerializer
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter, django_filters.rest_framework.DjangoFilterBackend]
+    filterset_class = UserActivityFilter
     search_fields = ['user__username', 'activity_type']
     ordering_fields = ['timestamp']
     permission_classes = [IsAuthenticated]
