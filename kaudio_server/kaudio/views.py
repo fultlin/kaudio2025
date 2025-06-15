@@ -1122,7 +1122,7 @@ class StatisticsViewSet(viewsets.ViewSet):
         """
         statistics = Statistics()
         serializer = StatisticsSerializer(statistics)
-        return Response(serializer.data)
+        return Response(serializer.data) 
 
 
 class ReviewViewSet(viewsets.ModelViewSet):

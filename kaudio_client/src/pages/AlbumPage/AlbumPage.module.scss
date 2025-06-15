@@ -1,0 +1,160 @@
+.albumPage {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.albumInfo {
+  background: #fff;
+  border-radius: 8px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.albumHeader {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.albumCover {
+  width: 300px;
+  height: 300px;
+  flex-shrink: 0;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+}
+
+.noCover {
+  width: 100%;
+  height: 100%;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  border-radius: 8px;
+}
+
+.albumDetails {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.albumTitle {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.artistLink {
+  color: #666;
+  text-decoration: none;
+  font-size: 1.2rem;
+
+  &:hover {
+    color: #333;
+  }
+}
+
+.albumMeta {
+  display: flex;
+  gap: 1rem;
+  color: #666;
+  font-size: 1rem;
+}
+
+.tracksList {
+  margin-top: 2rem;
+
+  h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+  }
+}
+
+.trackItem {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.trackLink {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  text-decoration: none;
+  color: inherit;
+
+  &:hover {
+    background: #f5f5f5;
+  }
+}
+
+.trackNumber {
+  width: 30px;
+  color: #666;
+}
+
+.trackTitle {
+  flex: 1;
+}
+
+.trackDuration {
+  color: #666;
+}
+
+.adminControls {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.editButton,
+.deleteButton {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+.editButton {
+  background-color: #4a90e2;
+  color: white;
+}
+
+.deleteButton {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.loading {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.2rem;
+  color: #666;
+}
+
+.error {
+  text-align: center;
+  padding: 2rem;
+  color: #e74c3c;
+  font-size: 1.2rem;
+}

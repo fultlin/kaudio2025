@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import instance from "../../axios/axios";
 import styles from "./TrackPage.module.scss";
 import { Link } from "react-router-dom";
+import authStore from "../../stores/authStore";
 
 const TrackPage = observer(() => {
   const { id } = useParams();
@@ -12,6 +13,7 @@ const TrackPage = observer(() => {
   const [track, setTrack] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { user } = authStore;
 
   useEffect(() => {
     const fetchTrack = async () => {
@@ -30,6 +32,22 @@ const TrackPage = observer(() => {
 
     fetchTrack();
   }, [id]);
+
+  const handleDelete = async () => {
+    if (window.confirm("Вы уверены, что хотите удалить этот трек?")) {
+      try {
+        await instance.delete(`tracks/${id}/`);
+        navigate("/tracks");
+      } catch (err) {
+        setError("Не удалось удалить трек");
+        console.error("Ошибка при удалении трека:", err);
+      }
+    }
+  };
+
+  const handleEdit = () => {
+    navigate(`/tracks/${id}/edit`);
+  };
 
   if (loading) {
     return <div className={styles.loading}>Загрузка...</div>;
@@ -83,6 +101,16 @@ const TrackPage = observer(() => {
                 {track.play_count} прослушиваний
               </span>
             </div>
+            {user?.role === "admin" && (
+              <div className={styles.adminControls}>
+                <button onClick={handleEdit} className={styles.editButton}>
+                  Редактировать
+                </button>
+                <button onClick={handleDelete} className={styles.deleteButton}>
+                  Удалить
+                </button>
+              </div>
+            )}
           </div>
         </div>
         {track.lyrics && (

@@ -18,6 +18,9 @@ import Artist from "../components/Artist/component";
 import StatisticsPage from "../components/Statistics";
 import SearchPage from "../components/SearchPage/component";
 import TrackPage from "../pages/TrackPage/component";
+import AlbumPage from "../pages/AlbumPage/component";
+import EditTrackPage from "../pages/EditTrackPage/component";
+import EditAlbumPage from "../pages/EditAlbumPage/component";
 
 const router = createBrowserRouter([
   {
@@ -92,6 +95,22 @@ const router = createBrowserRouter([
       {
         path: "tracks/:id",
         element: <TrackPage />,
+      },
+      {
+        path: "tracks/:id/edit",
+        element: <EditTrackPage />,
+      },
+      {
+        path: "albums/:id",
+        element: <AlbumPage />,
+      },
+      {
+        path: "albums/:id/edit",
+        element: <EditAlbumPage />,
+      },
+      {
+        path: "profile",
+        element: <Settings />,
       },
     ],
   },
