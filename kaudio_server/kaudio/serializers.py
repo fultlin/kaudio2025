@@ -354,8 +354,30 @@ class TrackReviewSerializer(ReviewSerializer):
         model = TrackReview
         fields = ReviewSerializer.Meta.fields + ['track']
 
+    def validate(self, data):
+        request = self.context.get('request')
+        user = request.user if request else None
+        track = data.get('track') or getattr(self.instance, 'track', None)
+        if user and track:
+            from kaudio.models import UserActivity
+            has_play = UserActivity.objects.filter(user=user, track=track, activity_type='play').exists()
+            if not has_play:
+                raise serializers.ValidationError('Вы не можете оставить отзыв на трек, который не прослушивали.')
+        return super().validate(data)
+
 
 class AlbumReviewSerializer(ReviewSerializer):
     class Meta(ReviewSerializer.Meta):
         model = AlbumReview
-        fields = ReviewSerializer.Meta.fields + ['album'] 
+        fields = ReviewSerializer.Meta.fields + ['album']
+
+    def validate(self, data):
+        request = self.context.get('request')
+        user = request.user if request else None
+        album = data.get('album') or getattr(self.instance, 'album', None)
+        if user and album:
+            from kaudio.models import UserActivity
+            has_play = UserActivity.objects.filter(user=user, album=album, activity_type='play').exists()
+            if not has_play:
+                raise serializers.ValidationError('Вы не можете оставить отзыв на альбом, который не прослушивали.')
+        return super().validate(data) 

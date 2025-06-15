@@ -61,8 +61,13 @@ const Reviews = observer(({ type, id }) => {
       }
     } catch (error) {
       console.error("Ошибка при отправке отзыва:", error);
-      setError("Не удалось отправить отзыв");
-    } finally {
+      if (error.response?.data?.non_field_errors) {
+        setError(error.response.data.non_field_errors.join(" "));
+      } else if (error.response?.data?.error) {
+        setError(error.response.data.error);
+      } else {
+        setError("Не удалось отправить отзыв");
+      }
       setLoading(false);
     }
   };
