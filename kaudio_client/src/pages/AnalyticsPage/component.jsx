@@ -48,8 +48,8 @@ const AnalyticsPage = observer(() => {
     try {
       setLoading(true);
       const [tracksResponse, activityResponse] = await Promise.all([
-        instance.get(`/analytics/tracks/?time_range=${timeRange}`),
-        instance.get(`/analytics/activity/?time_range=${timeRange}`),
+        instance.get(`/tracks-analytics/?time_range=${timeRange}`),
+        instance.get(`/user-activity/?time_range=${timeRange}`),
       ]);
 
       setPopularTracks(tracksResponse.data);

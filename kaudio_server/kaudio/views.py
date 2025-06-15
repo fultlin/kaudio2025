@@ -1257,19 +1257,23 @@ def get_tracks_analytics(request):
     else:  # year
         start_date = now - timedelta(days=365)
 
-    tracks = Track.objects.filter(
-        release_date__gte=start_date
-    ).annotate(
-        total_plays=Count("user_activities", filter=Q(user_activities__activity_type="play")),
-        avg_rating=Avg("reviews__rating"),
+    tracks = Track.objects.annotate(
+        total_plays=Count(
+            "user_activities",
+            filter=Q(
+                user_activities__activity_type="play",
+                user_activities__timestamp__gte=start_date
+            )
+        ),
+        calculated_avg_rating=Avg("reviews__rating"),
         review_count=Count("reviews")
-    ).order_by("-total_plays")[:10]
+    ).filter(total_plays__gt=0).order_by("-total_plays")[:10]
 
     data = [
         {
             "title": track.title,
             "play_count": track.total_plays,
-            "avg_rating": round(track.avg_rating, 2) if track.avg_rating else 0,
+            "avg_rating": round(track.calculated_avg_rating, 2) if track.calculated_avg_rating else 0,
             "review_count": track.review_count,
             "artist": track.artist.user.username if track.artist else "Неизвестный исполнитель"
         }
