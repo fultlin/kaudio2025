@@ -1,20 +1,20 @@
 .editTrackPage {
   padding: 2rem;
-  max-width: 800px;
-  margin: 0 auto;
+  color: #fff;
 
   h1 {
     margin-bottom: 2rem;
     font-size: 2rem;
-    color: var(--text-primary);
   }
 }
 
 .form {
-  background: var(--background-secondary);
+  max-width: 800px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.05);
   padding: 2rem;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .formGroup {
@@ -23,59 +23,52 @@
   label {
     display: block;
     margin-bottom: 0.5rem;
-    color: var(--text-secondary);
-    font-weight: 500;
+    color: #fff;
   }
 
-  input,
-  textarea,
-  select {
+  input[type="text"],
+  input[type="number"],
+  input[type="url"],
+  textarea {
     width: 100%;
     padding: 0.75rem;
-    border: 1px solid var(--border-color);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
     font-size: 1rem;
-    background: var(--background-primary);
-    color: var(--text-primary);
 
     &:focus {
       outline: none;
-      border-color: var(--accent-color);
-      box-shadow: 0 0 0 2px rgba(144, 0, 102, 0.2);
-    }
-  }
-
-  select {
-    cursor: pointer;
-    appearance: none;
-    background-color: var(--background-primary);
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 0.7rem center;
-    background-size: 1em;
-    padding-right: 2.5rem;
-    color: var(--text-primary);
-
-    option {
-      background-color: var(--background-primary);
-      color: var(--text-primary);
-      padding: 0.5rem;
-    }
-
-    &:hover {
-      border-color: var(--accent-color);
-    }
-
-    &:focus {
-      border-color: var(--accent-color);
+      border-color: #900066;
       box-shadow: 0 0 0 2px rgba(144, 0, 102, 0.2);
     }
   }
 
   textarea {
     resize: vertical;
-    min-height: 150px;
+    min-height: 100px;
   }
+}
+
+.checkboxContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #900066;
+}
+
+.checkboxLabel {
+  color: #fff;
+  cursor: pointer;
+  user-select: none;
 }
 
 .buttonGroup {
@@ -90,9 +83,8 @@
   border: none;
   border-radius: 4px;
   font-size: 1rem;
-  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
 
   &:hover {
     opacity: 0.9;
@@ -100,25 +92,25 @@
 }
 
 .submitButton {
-  background-color: var(--accent-color);
-  color: white;
+  background: #900066;
+  color: #fff;
 }
 
 .cancelButton {
-  background-color: var(--error-color);
-  color: white;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
 }
 
 .loading {
   text-align: center;
   padding: 2rem;
-  font-size: 1.2rem;
-  color: var(--text-secondary);
+  color: #fff;
 }
 
 .error {
   text-align: center;
   padding: 2rem;
-  color: var(--error-color);
-  font-size: 1.2rem;
+  color: #ff4757;
+  background: rgba(255, 71, 87, 0.1);
+  border-radius: 8px;
 }

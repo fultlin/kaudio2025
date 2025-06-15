@@ -85,7 +85,9 @@ class TrackSerializer(serializers.ModelSerializer):
     album_id = serializers.PrimaryKeyRelatedField(
         queryset=Album.objects.all(),
         source='album',
-        write_only=True
+        write_only=True,
+        required=False,
+        allow_null=True
     )
     genres = GenreSerializer(many=True, read_only=True)
 

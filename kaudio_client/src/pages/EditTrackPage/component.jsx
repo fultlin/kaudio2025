@@ -68,6 +68,7 @@ const EditTrackPage = observer(() => {
     album_id: "",
     artist_id: "",
   });
+  const [useAlbum, setUseAlbum] = useState(true);
   const { user } = authStore;
 
   useEffect(() => {
@@ -92,6 +93,7 @@ const EditTrackPage = observer(() => {
           album_id: trackResponse.data.album?.id || "",
           artist_id: trackResponse.data.artist?.id || "",
         });
+        setUseAlbum(!!trackResponse.data.album);
 
         // Загружаем список альбомов
         const albumsResponse = await instance.get("albums/");
@@ -116,7 +118,12 @@ const EditTrackPage = observer(() => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await instance.put(`tracks/${id}/`, formData);
+      const submitData = { ...formData };
+      if (!useAlbum) {
+        delete submitData.album_id;
+        delete submitData.position;
+      }
+      await instance.put(`tracks/${id}/`, submitData);
       const from = location.state?.from;
       navigate(from || `/tracks/${id}`);
     } catch (err) {
@@ -131,6 +138,17 @@ const EditTrackPage = observer(() => {
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleUseAlbumChange = (e) => {
+    setUseAlbum(e.target.checked);
+    if (!e.target.checked) {
+      setFormData((prev) => ({
+        ...prev,
+        album_id: "",
+        position: "",
+      }));
+    }
   };
 
   // Для react-select
@@ -200,19 +218,50 @@ const EditTrackPage = observer(() => {
         </div>
 
         <div className={styles.formGroup}>
-          <label>Альбом</label>
-          <Select
-            value={
-              albumOptions.find((opt) => opt.value === formData.album_id) ||
-              null
-            }
-            onChange={handleAlbumChange}
-            options={albumOptions}
-            placeholder="Выберите альбом"
-            isClearable
-            styles={darkSelectStyles}
-          />
+          <div className={styles.checkboxContainer}>
+            <input
+              type="checkbox"
+              id="useAlbum"
+              checked={useAlbum}
+              onChange={handleUseAlbumChange}
+              className={styles.checkbox}
+            />
+            <label htmlFor="useAlbum" className={styles.checkboxLabel}>
+              Трек входит в альбом
+            </label>
+          </div>
         </div>
+
+        {useAlbum && (
+          <>
+            <div className={styles.formGroup}>
+              <label>Альбом</label>
+              <Select
+                value={
+                  albumOptions.find((opt) => opt.value === formData.album_id) ||
+                  null
+                }
+                onChange={handleAlbumChange}
+                options={albumOptions}
+                placeholder="Выберите альбом"
+                isClearable
+                styles={darkSelectStyles}
+              />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label htmlFor="position">Позиция в альбоме</label>
+              <input
+                type="number"
+                id="position"
+                name="position"
+                value={formData.position}
+                onChange={handleChange}
+                min="1"
+              />
+            </div>
+          </>
+        )}
 
         <div className={styles.formGroup}>
           <label htmlFor="duration">Длительность (в секундах)</label>
@@ -221,17 +270,6 @@ const EditTrackPage = observer(() => {
             id="duration"
             name="duration"
             value={formData.duration}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div className={styles.formGroup}>
-          <label htmlFor="position">Позиция в альбоме</label>
-          <input
-            type="number"
-            id="position"
-            name="position"
-            value={formData.position}
             onChange={handleChange}
           />
         </div>
