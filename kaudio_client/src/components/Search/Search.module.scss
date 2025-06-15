@@ -37,6 +37,8 @@
     width: 150px;
     cursor: pointer;
     font-size: 14px;
+    display: block;
+    margin: 0 auto;
 
     &:focus {
       outline: none;

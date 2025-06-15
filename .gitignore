@@ -1,3 +1,4 @@
 db.sqlite3
 kaudio_server/media/*
 node_modules/*
+kaudio_server/debug.log

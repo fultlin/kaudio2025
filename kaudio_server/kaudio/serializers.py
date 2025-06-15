@@ -350,6 +350,8 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 
 class TrackReviewSerializer(ReviewSerializer):
+    track = serializers.PrimaryKeyRelatedField(queryset=Track.objects.all())
+    
     class Meta(ReviewSerializer.Meta):
         model = TrackReview
         fields = ReviewSerializer.Meta.fields + ['track']

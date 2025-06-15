@@ -1,7 +1,7 @@
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action, api_view, permission_classes, parser_classes
 from rest_framework.response import Response
-from django.db.models import Q, Sum, Count, Avg, F
+from django.db.models import Q, Sum, Count, Avg, F, Prefetch
 from .models import (
     Statistics, User, Artist, Genre, Album, Track, Playlist, UserActivity,
     Subscribe, UserSubscribe, UserAlbum, UserTrack, PlaylistTrack,
@@ -31,9 +31,29 @@ from rest_framework.exceptions import PermissionDenied
 from datetime import timedelta
 from django.db.models import Count
 from django.db.models.functions import TruncDate
+from django.db import connection
+import time
 
 logger = logging.getLogger(__name__)
 
+def log_query_performance(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        queries_before = len(connection.queries)
+        
+        result = func(*args, **kwargs)
+        
+        end_time = time.time()
+        queries_after = len(connection.queries)
+        total_queries = queries_after - queries_before
+        execution_time = end_time - start_time
+        
+        logger.info(f"Метод {func.__name__}:")
+        logger.info(f"- Время выполнения: {execution_time:.2f} секунд")
+        logger.info(f"- Количество запросов: {total_queries}")
+        
+        return result
+    return wrapper
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -424,8 +444,18 @@ class TrackViewSet(viewsets.ModelViewSet):
     serializer_class = TrackSerializer
     ordering_fields = ['release_date', 'play_count', 'likes_count', 'duration']
 
+    @log_query_performance
     def get_queryset(self):
-        queryset = Track.objects.select_related('artist', 'artist__user', 'album').all()
+        logger.info("TrackViewSet: Начало получения списка треков")
+        # Оптимизированный запрос с использованием select_related и prefetch_related
+        queryset = Track.objects.select_related(
+            'artist',
+            'artist__user',
+            'album'
+        ).prefetch_related(
+            'genres',
+            Prefetch('trackgenre_set', queryset=TrackGenre.objects.select_related('genre'))
+        )
         
         # Получаем параметры запроса
         title = self.request.query_params.get('title', None)
@@ -448,7 +478,8 @@ class TrackViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(genres__title__icontains=genre)
         if year:
             queryset = queryset.filter(release_date__year=year)
-            
+        
+        logger.info(f"TrackViewSet: Найдено {queryset.count()} треков")
         return queryset.distinct()
 
     def list(self, request, *args, **kwargs):
@@ -676,8 +707,17 @@ class PlaylistViewSet(viewsets.ModelViewSet):
     search_fields = ['title', 'user__username']
     ordering_fields = ['creation_date', 'total_tracks', 'total_duration']
 
+    @log_query_performance
     def get_queryset(self):
-        queryset = Playlist.objects.all()
+        logger.info("PlaylistViewSet: Начало получения списка плейлистов")
+        # Оптимизированный запрос с использованием select_related и prefetch_related
+        queryset = Playlist.objects.select_related(
+            'user'
+        ).prefetch_related(
+            'tracks',
+            Prefetch('tracks__artist'),
+            Prefetch('tracks__album')
+        )
         
         user_id = self.request.query_params.get('user_id', None)
         if user_id is not None:
@@ -691,6 +731,7 @@ class PlaylistViewSet(viewsets.ModelViewSet):
         if exclude_empty and str(exclude_empty).lower() == 'true':
             queryset = queryset.exclude(total_tracks=0)
         
+        logger.info(f"PlaylistViewSet: Найдено {queryset.count()} плейлистов")
         return queryset
 
     @action(detail=True, methods=['get'])
@@ -1165,12 +1206,19 @@ def recent_tracks(request):
 def recent_albums(request):
     """Получение последних добавленных альбомов"""
     limit = request.query_params.get('limit', 10)
+    exclude_empty = request.query_params.get('exclude_empty', 'false').lower() == 'true'
+    
     try:
         limit = int(limit)
     except ValueError:
         limit = 10
     
-    albums = Album.objects.all().order_by('-id')[:limit]
+    albums = Album.objects.all()
+    
+    if exclude_empty:
+        albums = albums.exclude(total_tracks=0)
+    
+    albums = albums.order_by('-id')[:limit]
     serializer = AlbumSerializer(albums, many=True, context={'request': request})
     return Response(serializer.data)
 
@@ -1179,6 +1227,7 @@ class StatisticsViewSet(viewsets.ViewSet):
     """ViewSet для работы со статистикой"""
     
     permission_classes = [IsAuthenticated]
+    queryset = Statistics.objects.all()
     
     def list(self, request):
         """
@@ -1186,7 +1235,7 @@ class StatisticsViewSet(viewsets.ViewSet):
         """
         statistics = Statistics()
         serializer = StatisticsSerializer(statistics)
-        return Response(serializer.data) 
+        return Response(serializer.data)
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
@@ -1207,13 +1256,28 @@ class ReviewViewSet(viewsets.ModelViewSet):
 class TrackReviewViewSet(ReviewViewSet):
     queryset = TrackReview.objects.all()
     serializer_class = TrackReviewSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
+    @log_query_performance
     def get_queryset(self):
-        queryset = super().get_queryset()
+        logger.info("TrackReviewViewSet: Начало получения отзывов")
+        # Оптимизированный запрос с использованием select_related
+        queryset = TrackReview.objects.select_related(
+            'author',
+            'track',
+            'track__artist',
+            'track__album'
+        )
+        
         track_id = self.request.query_params.get('track_id')
         if track_id:
             queryset = queryset.filter(track_id=track_id)
+        
+        logger.info(f"TrackReviewViewSet: Найдено {queryset.count()} отзывов")
         return queryset
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
 
 
 class AlbumReviewViewSet(ReviewViewSet):
@@ -1319,3 +1383,98 @@ def get_user_activity(request):
         })
 
     return Response(data) 
+
+class OptimizedTrackListView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, format=None):
+        """
+        Оптимизированное получение списка треков с альбомами и исполнителями
+        """
+        logger.info("OptimizedTrackListView: Получение списка треков")
+        try:
+            tracks = Track.objects.select_related(
+                'artist',
+                'album'
+            ).prefetch_related(
+                'genres',
+                Prefetch('trackgenre_set', queryset=TrackGenre.objects.select_related('genre'))
+            ).all()
+            
+            logger.info(f"OptimizedTrackListView: Найдено {tracks.count()} треков")
+            
+            serializer = TrackSerializer(tracks, many=True, context={'request': request})
+            return Response({
+                'status': 'success',
+                'data': serializer.data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"OptimizedTrackListView: Ошибка при получении треков - {str(e)}")
+            return Response({
+                'status': 'error',
+                'message': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class OptimizedPlaylistListView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, format=None):
+        """
+        Оптимизированное получение плейлистов с информацией о пользователях
+        """
+        logger.info("OptimizedPlaylistListView: Получение плейлистов")
+        try:
+            playlists = Playlist.objects.select_related(
+                'user'
+            ).prefetch_related(
+                'tracks',
+                Prefetch('tracks__artist'),
+                Prefetch('tracks__album')
+            ).filter(user=request.user)
+            
+            logger.info(f"OptimizedPlaylistListView: Найдено {playlists.count()} плейлистов")
+            
+            serializer = PlaylistSerializer(playlists, many=True, context={'request': request})
+            return Response({
+                'status': 'success',
+                'data': serializer.data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"OptimizedPlaylistListView: Ошибка при получении плейлистов - {str(e)}")
+            return Response({
+                'status': 'error',
+                'message': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class OptimizedUserReviewsView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, format=None):
+        """
+        Оптимизированное получение отзывов пользователя с информацией о треках
+        """
+        logger.info("OptimizedUserReviewsView: Получение отзывов пользователя")
+        try:
+            reviews = TrackReview.objects.select_related(
+                'user',
+                'track',
+                'track__artist',
+                'track__album'
+            ).filter(user=request.user)
+            
+            logger.info(f"OptimizedUserReviewsView: Найдено {reviews.count()} отзывов")
+            
+            serializer = TrackReviewSerializer(reviews, many=True, context={'request': request})
+            return Response({
+                'status': 'success',
+                'data': serializer.data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"OptimizedUserReviewsView: Ошибка при получении отзывов - {str(e)}")
+            return Response({
+                'status': 'error',
+                'message': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 

@@ -2,14 +2,44 @@ from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import status
-from kaudio.models import User, Artist, Album, Genre, Track, TrackGenre, AlbumGenre, UserAlbum, UserTrack
+from rest_framework import status, serializers
+from kaudio.models import User, Artist, Album, Genre, Track, TrackGenre, AlbumGenre, UserAlbum, UserTrack, Playlist, Review
 from kaudio.serializers import TrackSerializer
 from django.conf import settings
-from django.db.models import Sum
+from django.db.models import Sum, Prefetch
 from django.shortcuts import get_object_or_404
 import os
 from django.utils import timezone
+
+class PlaylistSerializer(serializers.ModelSerializer):
+    tracks = TrackSerializer(many=True, read_only=True)
+    user = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Playlist
+        fields = ['id', 'name', 'user', 'tracks', 'created_at']
+    
+    def get_user(self, obj):
+        return {
+            'id': obj.user.id,
+            'username': obj.user.username,
+            'email': obj.user.email
+        }
+
+class ReviewSerializer(serializers.ModelSerializer):
+    track = TrackSerializer(read_only=True)
+    user = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Review
+        fields = ['id', 'user', 'track', 'rating', 'comment', 'created_at']
+    
+    def get_user(self, obj):
+        return {
+            'id': obj.user.id,
+            'username': obj.user.username,
+            'email': obj.user.email
+        }
 
 class ProfileImageUploadView(APIView):
     permission_classes = [IsAuthenticated]
@@ -279,4 +309,90 @@ class AlbumImageUploadView(APIView):
         """
         response = Response()
         response['Allow'] = 'POST, OPTIONS'
-        return response 
+        return response
+
+
+class TrackListView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, format=None):
+        """
+        Получение списка треков с оптимизированными запросами
+        """
+        try:
+            tracks = Track.objects.select_related(
+                'artist',
+                'album'
+            ).prefetch_related(
+                'genres',
+                Prefetch('trackgenre_set', queryset=TrackGenre.objects.select_related('genre'))
+            ).all()
+            
+            serializer = TrackSerializer(tracks, many=True, context={'request': request})
+            return Response({
+                'status': 'success',
+                'data': serializer.data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'status': 'error',
+                'message': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class PlaylistListView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, format=None):
+        """
+        Получение плейлистов с информацией о пользователях
+        """
+        try:
+            playlists = Playlist.objects.select_related(
+                'user'
+            ).prefetch_related(
+                'tracks',
+                Prefetch('tracks__artist'),
+                Prefetch('tracks__album')
+            ).filter(user=request.user)
+            
+            serializer = PlaylistSerializer(playlists, many=True, context={'request': request})
+            return Response({
+                'status': 'success',
+                'data': serializer.data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'status': 'error',
+                'message': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class UserReviewsView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, format=None):
+        """
+        Получение отзывов пользователя с информацией о треках
+        """
+        try:
+            reviews = Review.objects.select_related(
+                'user',
+                'track',
+                'track__artist',
+                'track__album'
+            ).filter(user=request.user)
+            
+            serializer = ReviewSerializer(reviews, many=True, context={'request': request})
+            return Response({
+                'status': 'success',
+                'data': serializer.data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'status': 'error',
+                'message': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
