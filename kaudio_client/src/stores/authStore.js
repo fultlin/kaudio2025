@@ -62,77 +62,34 @@ class AuthStore {
   };
 
   checkAuth = async () => {
-    console.log("AuthStore.checkAuth: Проверяем аутентификацию");
     const token = localStorage.getItem("token");
-
     if (!token) {
-      console.log("AuthStore.checkAuth: Токен не найден");
-      this.setIsAuthenticated(false);
       this.setUser(null);
-      return false;
+      this.setArtistProfile(null);
+      this.isAuthenticated = false;
+      this.isArtist = false;
+      return;
     }
 
-    console.log("AuthStore.checkAuth: Токен найден:", token);
-
-    // Устанавливаем токен в заголовки по умолчанию
-    instance.defaults.headers.common["Authorization"] = `Token ${token}`;
-
-    this.setIsLoading(true);
-
     try {
-      console.log("AuthStore.checkAuth: Запрашиваем данные пользователя");
-      // Проверяем валидность токена, запрашивая данные текущего пользователя
       const response = await instance.get("users/me/");
-
-      console.log("AuthStore.checkAuth: Получен ответ:", response.data);
-
-      // Если запрос успешен, устанавливаем пользователя и статус аутентификации
       this.setUser(response.data);
-      this.setIsAuthenticated(true);
+      this.isAuthenticated = true;
 
-      console.log(
-        "AuthStore.checkAuth: Пользователь аутентифицирован:",
-        this.user
-      );
-
-      // Проверяем статус артиста у пользователя
+      // Проверяем статус артиста сразу после получения данных пользователя
       await this.checkArtistStatus();
-
-      return true;
     } catch (error) {
-      console.error("AuthStore.checkAuth: Ошибка при проверке токена:", error);
-      console.error(
-        "AuthStore.checkAuth: Детали ошибки:",
-        error.response?.data || error.message
-      );
-
-      // Если токен неверный, удаляем его
-      localStorage.removeItem("token");
-      delete instance.defaults.headers.common["Authorization"];
-
-      this.setIsAuthenticated(false);
+      console.error("Ошибка при проверке авторизации:", error);
       this.setUser(null);
-      this.setError("Ошибка аутентификации: токен недействителен");
-
-      return false;
-    } finally {
-      this.setIsLoading(false);
+      this.setArtistProfile(null);
+      this.isAuthenticated = false;
+      this.isArtist = false;
+      localStorage.removeItem("token");
     }
   };
 
   checkArtistStatus = async () => {
-    if (!this.user) {
-      console.log("AuthStore.checkArtistStatus: Нет пользователя");
-      return;
-    }
-
-    console.log("AuthStore.checkArtistStatus: Проверяем статус артиста");
-
-    // Проверяем, есть ли уже данные артиста в сторе
-    if (this.artistProfile) {
-      console.log("AuthStore.checkArtistStatus: Профиль артиста уже загружен");
-      return;
-    }
+    if (!this.user) return;
 
     try {
       const response = await instance.get(`artists/?user=${this.user.id}`);
@@ -152,19 +109,27 @@ class AuthStore {
             ? getFullImageUrl(this.user.img_profile_url)
             : null,
         });
+
+        // Устанавливаем флаг isArtist
+        this.isArtist = true;
       } else {
         console.log("AuthStore.checkArtistStatus: Артист не найден");
         this.setArtistProfile(null);
         this.setUser({
           ...this.user,
+          artist: null,
           img_profile_url: this.user.img_profile_url
             ? getFullImageUrl(this.user.img_profile_url)
             : null,
         });
+
+        // Сбрасываем флаг isArtist
+        this.isArtist = false;
       }
     } catch (error) {
       console.error("Ошибка при проверке статуса артиста:", error);
       this.setArtistProfile(null);
+      this.isArtist = false;
     }
   };
 

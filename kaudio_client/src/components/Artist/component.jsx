@@ -178,16 +178,7 @@ const Artist = observer(() => {
 
   // Получаем имя артиста, предпочитая никнейм пользователя, связанного с артистом
   const artistName =
-    artist.user?.username ||
-    (artist.nickname
-      ? artist.nickname
-      : artist.name
-      ? artist.name
-      : artist.display_name
-      ? artist.display_name
-      : artist.email
-      ? artist.email
-      : "Неизвестный артист");
+    artist.user?.username || artist.email || "Неизвестный артист";
   const avatarUrl = fixImageUrl(artist.img_cover_url);
   const artistDescription = artist.bio || "";
 
