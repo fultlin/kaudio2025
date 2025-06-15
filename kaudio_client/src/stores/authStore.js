@@ -39,7 +39,9 @@ class AuthStore {
     this.user = user;
     this.isAuthenticated = !!user;
     this.isAdmin = user?.role === "admin";
+    this.isArtist = user?.role === "artist";
     console.log("AuthStore.setUser: isAdmin установлен в:", this.isAdmin);
+    console.log("AuthStore.setUser: isArtist установлен в:", this.isArtist);
   };
 
   setIsAuthenticated(status) {

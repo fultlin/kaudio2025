@@ -70,10 +70,41 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def activities(self, request, pk=None):
-        user = self.get_object()
-        activities = user.activities.all()
-        serializer = UserActivitySerializer(activities, many=True)
-        return Response(serializer.data)
+        try:
+            user = self.get_object()
+            print(f"[UserActivity Debug] Получение активностей для пользователя {user.username}")
+            
+            # Проверяем, что пользователь запрашивает свои активности или является администратором
+            if request.user != user and not request.user.is_staff:
+                return Response(
+                    {"error": "У вас нет прав для просмотра активностей этого пользователя"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Получаем активности с предзагрузкой связанных данных
+            activities = UserActivity.objects.select_related(
+                'track',
+                'track__artist',
+                'track__album',
+                'album',
+                'album__artist',
+                'artist'
+            ).filter(user=user).order_by('-timestamp')
+            
+            print(f"[UserActivity Debug] Найдено активностей: {activities.count()}")
+            
+            # Сериализуем данные с контекстом request
+            serializer = UserActivitySerializer(activities, many=True, context={'request': request})
+            return Response(serializer.data)
+            
+        except Exception as e:
+            print(f"[UserActivity Error] Ошибка при получении активностей пользователя {user.username}: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {"error": "Не удалось получить активности пользователя"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(detail=True, methods=['get'])
     def subscribes(self, request, pk=None):
@@ -741,34 +772,45 @@ class UserActivityViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['user__username', 'activity_type']
     ordering_fields = ['timestamp']
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        queryset = UserActivity.objects.all()
+        print(f"[UserActivityViewSet Debug] Получение активностей для пользователя {self.request.user.username}")
         
-        print(f"UserActivityViewSet.get_queryset вызван, авторизованный пользователь: {self.request.user}")
+        # Базовый QuerySet с предзагрузкой связанных данных
+        queryset = UserActivity.objects.select_related(
+            'user',
+            'track',
+            'track__artist',
+            'track__album',
+            'album',
+            'album__artist',
+            'artist'
+        )
         
-        if self.request.user.is_authenticated:
-            print(f"Фильтруем активности для пользователя {self.request.user.username} (ID: {self.request.user.id})")
-            queryset = UserActivity.objects.get_user_activities(self.request.user)
+        # Фильтруем по пользователю, если указан user_id
+        user_id = self.request.query_params.get('user_id')
+        if user_id:
+            print(f"[UserActivityViewSet Debug] Фильтрация по user_id: {user_id}")
+            # Проверяем права доступа
+            if str(self.request.user.id) != str(user_id) and not self.request.user.is_staff:
+                print(f"[UserActivityViewSet Debug] Отказано в доступе: пользователь {self.request.user.username} пытается получить активности пользователя {user_id}")
+                return UserActivity.objects.none()
+            queryset = queryset.filter(user_id=user_id)
         else:
-            print("Пользователь не аутентифицирован")
-            return UserActivity.objects.none()
+            # Если user_id не указан, показываем только активности текущего пользователя
+            queryset = queryset.filter(user=self.request.user)
         
-        user_id = self.request.query_params.get('user_id', None)
-        if user_id is not None:
-            print(f"Дополнительная фильтрация по user_id: {user_id}")
-            queryset = queryset.filter(user__id=user_id)
+        # Фильтруем по типу активности, если указан
+        activity_type = self.request.query_params.get('activity_type')
+        if activity_type:
+            print(f"[UserActivityViewSet Debug] Фильтрация по activity_type: {activity_type}")
+            queryset = queryset.filter(activity_type=activity_type)
         
-        activity_type = self.request.query_params.get('activity_type', None)
-        if activity_type is not None:
-            print(f"Фильтрация по activity_type: {activity_type}")
-            
-            if activity_type == 'like':
-                queryset = UserActivity.objects.get_liked_tracks(self.request.user)
-            else:
-                queryset = queryset.filter(activity_type=activity_type)
+        # Сортируем по времени
+        queryset = queryset.order_by('-timestamp')
         
-        print(f"Итоговое количество записей: {queryset.count()}")
+        print(f"[UserActivityViewSet Debug] Найдено активностей: {queryset.count()}")
         return queryset
 
 
@@ -934,7 +976,8 @@ def register_view(request):
     user = User.objects.create_user(
         username=username,
         email=email,
-        password=password
+        password=password,
+        role='user'  # Явно устанавливаем роль пользователя
     )
     
     token = Token.objects.create(user=user)

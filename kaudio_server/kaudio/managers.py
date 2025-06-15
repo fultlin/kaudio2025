@@ -7,28 +7,36 @@ class UserActivityManager(models.Manager):
         """
         Базовый метод для получения активностей пользователя
         """
-        queryset = self.filter(user=user)
-        
-        if activity_type:
-            queryset = queryset.filter(activity_type=activity_type)
+        try:
+            queryset = self.filter(user=user)
             
-        return queryset.select_related(
-            'track', 
-            'track__artist', 
-            'track__album',
-            'album',
-            'album__artist',
-            'artist'
-        )
+            if activity_type:
+                queryset = queryset.filter(activity_type=activity_type)
+                
+            return queryset.select_related(
+                'track', 
+                'track__artist', 
+                'track__album',
+                'album',
+                'album__artist',
+                'artist'
+            ).order_by('-timestamp')
+        except Exception as e:
+            print(f"Ошибка в get_user_activities: {str(e)}")
+            return self.none()
 
     def get_liked_tracks(self, user):
         """
         Получить лайкнутые треки пользователя
         """
-        return self.get_user_activities(
-            user=user,
-            activity_type='like'
-        ).filter(track__isnull=False)
+        try:
+            return self.get_user_activities(
+                user=user,
+                activity_type='like'
+            ).filter(track__isnull=False)
+        except Exception as e:
+            print(f"Ошибка в get_liked_tracks: {str(e)}")
+            return self.none()
 
 
 class TrackManager(models.Manager):

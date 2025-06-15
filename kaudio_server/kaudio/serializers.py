@@ -16,9 +16,16 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ['last_login', 'date_joined']
 
     def get_profile_image_url(self, obj):
-        if obj.profile_image:
-            return self.context['request'].build_absolute_uri(obj.profile_image.url)
-        return None
+        if not obj.profile_image:
+            return None
+        try:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.profile_image.url)
+            return obj.profile_image.url
+        except Exception as e:
+            print(f"Ошибка при получении URL изображения профиля: {str(e)}")
+            return None
 
     def get_img_profile_url(self, obj):
         # Для обратной совместимости возвращаем то же значение
@@ -141,52 +148,50 @@ class PlaylistTrackSerializer(serializers.ModelSerializer):
 
 class UserActivitySerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
-    user_id = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(),
-        source='user',
-        write_only=True
-    )
     track = TrackSerializer(read_only=True)
-    track_id = serializers.PrimaryKeyRelatedField(
-        queryset=Track.objects.all(),
-        source='track',
-        write_only=True,
-        required=False,
-        allow_null=True
-    )
     album = AlbumSerializer(read_only=True)
-    album_id = serializers.PrimaryKeyRelatedField(
-        queryset=Album.objects.all(),
-        source='album',
-        write_only=True,
-        required=False,
-        allow_null=True
-    )
     playlist = PlaylistSerializer(read_only=True)
-    playlist_id = serializers.PrimaryKeyRelatedField(
-        queryset=Playlist.objects.all(),
-        source='playlist',
-        write_only=True,
-        required=False,
-        allow_null=True
-    )
     artist = ArtistSerializer(read_only=True)
-    artist_id = serializers.PrimaryKeyRelatedField(
-        queryset=Artist.objects.all(),
-        source='artist',
-        write_only=True,
-        required=False,
-        allow_null=True
-    )
-
+    
+    # Дополнительные поля для удобства
+    activity_type_display = serializers.SerializerMethodField()
+    formatted_timestamp = serializers.SerializerMethodField()
+    
     class Meta:
         model = UserActivity
         fields = [
-            'id', 'user', 'user_id', 'activity_type', 
-            'track', 'track_id', 'album', 'album_id', 'playlist', 'playlist_id',
-            'artist', 'artist_id', 'duration', 'timestamp'
+            'id', 'user', 'activity_type', 'activity_type_display',
+            'track', 'album', 'playlist', 'artist',
+            'duration', 'timestamp', 'formatted_timestamp'
         ]
         read_only_fields = ['timestamp']
+    
+    def get_activity_type_display(self, obj):
+        """Возвращает человекочитаемое название типа активности"""
+        activity_types = {
+            'play': 'Прослушивание',
+            'like': 'Лайк',
+            'like_album': 'Лайк альбома',
+            'follow_artist': 'Подписка на исполнителя',
+            'add_to_playlist': 'Добавление в плейлист',
+            'remove_from_playlist': 'Удаление из плейлиста'
+        }
+        return activity_types.get(obj.activity_type, obj.activity_type)
+    
+    def get_formatted_timestamp(self, obj):
+        """Возвращает отформатированную дату и время"""
+        from django.utils import timezone
+        
+        if not obj.timestamp:
+            return None
+            
+        # Если timestamp в UTC, конвертируем в локальное время
+        if timezone.is_aware(obj.timestamp):
+            local_time = timezone.localtime(obj.timestamp)
+        else:
+            local_time = obj.timestamp
+            
+        return local_time.strftime('%d.%m.%Y %H:%M')
 
 
 class SubscribeSerializer(serializers.ModelSerializer):

@@ -12,7 +12,7 @@ const Sidebar = observer(({ isOpen }) => {
   const isAdmin = authStore.isAdmin;
 
   const handleProfileClick = () => {
-    navigate("/settings");
+    navigate("/profile");
   };
 
   const handleLogout = () => {

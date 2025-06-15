@@ -35,6 +35,7 @@ class User(AbstractUser):
     ROLE_CHOICES = (
         ('admin', _('Администратор')),
         ('user', _('Пользователь')),
+        ('artist', _('Исполнитель')),
         ('moderator', _('Модератор')),
     )
     
@@ -353,6 +354,7 @@ class UserActivity(models.Model):
         ('like', _('Лайк')),
         ('like_album', _('Лайк альбома')),
         ('add_to_playlist', _('Добавление в плейлист')),
+        ('remove_from_playlist', _('Удаление из плейлиста')),
         ('follow_artist', _('Подписка на исполнителя')),
     )
     
@@ -415,9 +417,61 @@ class UserActivity(models.Model):
         verbose_name = _('Активность пользователя')
         verbose_name_plural = _('Активности пользователей')
         ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['user', 'activity_type']),
+            models.Index(fields=['timestamp']),
+        ]
     
     def __str__(self):
-        return f'{self.user.username} - {self.get_activity_type_display()}'
+        return f"{self.user.username} - {self.get_activity_type_display()} - {self.timestamp}"
+    
+    def clean(self):
+        """Проверяет, что для каждого типа активности указаны соответствующие поля"""
+        from django.core.exceptions import ValidationError
+        
+        if self.activity_type == 'play':
+            if not self.track:
+                raise ValidationError(_("Для активности 'play' необходимо указать трек"))
+        elif self.activity_type == 'like':
+            if not any([self.track, self.album, self.artist]):
+                raise ValidationError(_("Для активности 'like' необходимо указать трек, альбом или исполнителя"))
+        elif self.activity_type == 'follow_artist':
+            if not self.artist:
+                raise ValidationError(_("Для активности 'follow_artist' необходимо указать исполнителя"))
+        elif self.activity_type in ['add_to_playlist', 'remove_from_playlist']:
+            if not all([self.track, self.playlist]):
+                raise ValidationError(_("Для активности 'add_to_playlist' или 'remove_from_playlist' необходимо указать трек и плейлист"))
+    
+    def save(self, *args, **kwargs):
+        """Сохраняет активность и обновляет связанные счетчики"""
+        self.full_clean()
+        
+        # Обновляем счетчики в зависимости от типа активности
+        if self.activity_type == 'play' and self.track:
+            self.track.play_count += 1
+            self.track.save()
+        elif self.activity_type == 'like':
+            if self.track:
+                self.track.likes_count += 1
+                self.track.save()
+            elif self.album:
+                self.album.likes_count += 1
+                self.album.save()
+        
+        super().save(*args, **kwargs)
+    
+    def delete(self, *args, **kwargs):
+        """Удаляет активность и обновляет связанные счетчики"""
+        # Обновляем счетчики в зависимости от типа активности
+        if self.activity_type == 'like':
+            if self.track:
+                self.track.likes_count = max(0, self.track.likes_count - 1)
+                self.track.save()
+            elif self.album:
+                self.album.likes_count = max(0, self.album.likes_count - 1)
+                self.album.save()
+        
+        super().delete(*args, **kwargs)
 
 
 class Subscribe(models.Model):
