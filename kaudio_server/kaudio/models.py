@@ -201,6 +201,10 @@ class Album(models.Model):
         default=0,
         verbose_name=_('Количество лайков')
     )
+    play_count = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_('Количество прослушиваний')
+    )
     genres = models.ManyToManyField(
         Genre,
         through='AlbumGenre',
@@ -466,8 +470,8 @@ class UserActivity(models.Model):
         from django.core.exceptions import ValidationError
         
         if self.activity_type == 'play':
-            if not self.track:
-                raise ValidationError(_("Для активности 'play' необходимо указать трек"))
+            if not any([self.track, self.album]):
+                raise ValidationError(_("Для активности 'play' необходимо указать трек или альбом"))
         elif self.activity_type == 'like':
             if not any([self.track, self.album, self.artist]):
                 raise ValidationError(_("Для активности 'like' необходимо указать трек, альбом или исполнителя"))
@@ -482,10 +486,13 @@ class UserActivity(models.Model):
         """Сохраняет активность и обновляет связанные счетчики"""
         self.full_clean()
         
-        # Обновляем счетчики в зависимости от типа активности
-        if self.activity_type == 'play' and self.track:
-            self.track.play_count += 1
-            self.track.save()
+        if self.activity_type == 'play':
+            if self.track:
+                self.track.play_count += 1
+                self.track.save()
+            if self.album:
+                self.album.play_count = self.album.play_count + 1 if hasattr(self.album, 'play_count') else 1
+                self.album.save()
         elif self.activity_type == 'like':
             if self.track:
                 self.track.likes_count += 1

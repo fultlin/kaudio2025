@@ -261,8 +261,8 @@ class ArtistViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def tracks(self, request, pk=None):
         artist = self.get_object()
-        tracks = Track.objects.filter(artist=artist)
-        serializer = TrackSerializer(tracks, many=True)
+        tracks = artist.tracks.all()
+        serializer = TrackSerializer(tracks, many=True, context={'request': request})
         return Response(serializer.data)
 
 
@@ -284,7 +284,7 @@ class GenreViewSet(viewsets.ModelViewSet):
     def tracks(self, request, pk=None):
         genre = self.get_object()
         tracks = Track.objects.filter(genres=genre)
-        serializer = TrackSerializer(tracks, many=True)
+        serializer = TrackSerializer(tracks, many=True, context={'request': request})
         return Response(serializer.data)
 
 
@@ -513,6 +513,15 @@ class TrackViewSet(viewsets.ModelViewSet):
                 track=track,
                 duration=request.data.get('duration', track.duration)
             )
+            
+            if track.album:
+                album_activity = UserActivity.objects.create(
+                    user=user,
+                    activity_type='play',
+                    album=track.album,
+                    duration=request.data.get('duration', track.duration)
+                )
+            
             activity_serializer = UserActivitySerializer(activity)
             
             artist = track.artist
@@ -987,7 +996,7 @@ def register_view(request):
         username=username,
         email=email,
         password=password,
-        role='user'  # Явно устанавливаем роль пользователя
+        role='user'
     )
     
     token = Token.objects.create(user=user)

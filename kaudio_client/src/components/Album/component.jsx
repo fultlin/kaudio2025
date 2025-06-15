@@ -7,6 +7,7 @@ import instance from "../../axios/axios";
 import { toJS } from "mobx";
 import styles from "./Album.module.scss";
 import { ArrowRight } from "lucide-react";
+import Reviews from "../Reviews/component";
 
 const Album = observer((props) => {
   const { id } = useParams();
@@ -401,6 +402,7 @@ const Album = observer((props) => {
           ))
         )}
       </div>
+      <Reviews type="albums" id={id} />
     </div>
   );
 });
