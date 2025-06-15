@@ -134,7 +134,8 @@ class PlaylistSerializer(serializers.ModelSerializer):
     user_id = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(),
         source='user',
-        write_only=True
+        write_only=True,
+        required=False
     )
     tracks = TrackSerializer(many=True, read_only=True)
 
@@ -145,6 +146,11 @@ class PlaylistSerializer(serializers.ModelSerializer):
             'is_public', 'total_tracks', 'total_duration', 'tracks'
         ]
         read_only_fields = ['creation_date', 'total_tracks', 'total_duration']
+
+    def update(self, instance, validated_data):
+        if 'user' not in validated_data:
+            validated_data['user'] = instance.user
+        return super().update(instance, validated_data)
 
 
 class PlaylistTrackSerializer(serializers.ModelSerializer):

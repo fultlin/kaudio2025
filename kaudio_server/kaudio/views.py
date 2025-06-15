@@ -765,6 +765,24 @@ class PlaylistViewSet(viewsets.ModelViewSet):
         
         return Response({'status': 'track removed from playlist'})
 
+    def update(self, request, *args, **kwargs):
+        playlist = self.get_object()
+        if playlist.user != request.user and not request.user.is_staff:
+            return Response({'error': 'Вы не являетесь владельцем этого плейлиста.'}, status=403)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        playlist = self.get_object()
+        if playlist.user != request.user and not request.user.is_staff:
+            return Response({'error': 'Вы не являетесь владельцем этого плейлиста.'}, status=403)
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        playlist = self.get_object()
+        if playlist.user != request.user and not request.user.is_staff:
+            return Response({'error': 'Вы не являетесь владельцем этого плейлиста.'}, status=403)
+        return super().destroy(request, *args, **kwargs)
+
 
 class UserActivityViewSet(viewsets.ModelViewSet):
     queryset = UserActivity.objects.all()
