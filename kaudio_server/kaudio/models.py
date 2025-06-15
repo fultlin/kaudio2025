@@ -6,6 +6,9 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator
 from django.urls import reverse
 from django.core.files.storage import default_storage
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+from django.db.models import Avg
 
 from .managers import UserActivityManager, TrackManager
 
@@ -218,7 +221,7 @@ class Track(models.Model):
     """Модель трека"""
     
     title = models.CharField(
-        max_length=200,
+        max_length=255,
         verbose_name=_('Название')
     )
     artist = models.ForeignKey(
@@ -241,7 +244,7 @@ class Track(models.Model):
         null=True,
         blank=True
     )
-    track_number = models.PositiveIntegerField(
+    track_number = models.IntegerField(
         verbose_name=_('Номер трека'),
         null=True,
         blank=True
@@ -257,14 +260,16 @@ class Track(models.Model):
         blank=True,
         null=True
     )
-    duration = models.PositiveIntegerField(
-        verbose_name=_('Продолжительность (сек)')
+    duration = models.IntegerField(
+        verbose_name=_('Продолжительность (сек)'),
+        null=True,
+        blank=True
     )
-    play_count = models.PositiveIntegerField(
+    play_count = models.IntegerField(
         default=0,
         verbose_name=_('Количество воспроизведений')
     )
-    likes_count = models.PositiveIntegerField(
+    likes_count = models.IntegerField(
         default=0,
         verbose_name=_('Количество лайков')
     )
@@ -282,6 +287,14 @@ class Track(models.Model):
         through='TrackGenre',
         related_name='tracks',
         verbose_name=_('Жанры')
+    )
+    avg_rating = models.DecimalField(
+        max_digits=3,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        default=None,
+        verbose_name=_('Средний рейтинг')
     )
     
     objects = TrackManager()
@@ -751,3 +764,11 @@ class AlbumReview(Review):
 
     class Meta:
         unique_together = ('author', 'album')
+
+@receiver([post_save, post_delete], sender=TrackReview)
+def update_track_rating(sender, instance, **kwargs):
+    """Обновляет средний рейтинг трека при изменении отзывов"""
+    track = instance.track
+    avg_rating = TrackReview.objects.filter(track=track).aggregate(
+        avg=Avg('rating'))['avg']
+    Track.objects.filter(id=track.id).update(avg_rating=avg_rating)

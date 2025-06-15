@@ -455,6 +455,9 @@ class TrackViewSet(viewsets.ModelViewSet):
         ).prefetch_related(
             'genres',
             Prefetch('trackgenre_set', queryset=TrackGenre.objects.select_related('genre'))
+        ).annotate(
+            calculated_avg_rating=Avg('reviews__rating'),
+            total_plays=Count('user_activities', filter=Q(user_activities__activity_type='play'))
         )
         
         # Получаем параметры запроса
@@ -1277,7 +1280,9 @@ class TrackReviewViewSet(ReviewViewSet):
         return queryset
 
     def perform_create(self, serializer):
+        logger.info(f"TrackReviewViewSet: Создание отзыва. Данные: {serializer.validated_data}")
         serializer.save(author=self.request.user)
+        logger.info(f"TrackReviewViewSet: Отзыв успешно создан")
 
 
 class AlbumReviewViewSet(ReviewViewSet):

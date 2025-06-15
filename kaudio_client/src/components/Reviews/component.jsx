@@ -48,8 +48,8 @@ const Reviews = observer(({ type, id }) => {
         `${type.replace("s", "")}-reviews/`,
         {
           rating,
+          track: id,
           text: reviewText,
-          [type.replace("s", "")]: id,
         }
       );
 

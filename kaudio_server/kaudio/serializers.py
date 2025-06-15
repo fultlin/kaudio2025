@@ -98,6 +98,8 @@ class TrackSerializer(serializers.ModelSerializer):
         allow_null=True
     )
     genres = GenreSerializer(many=True, read_only=True)
+    calculated_avg_rating = serializers.FloatField(read_only=True)
+    total_plays = serializers.IntegerField(read_only=True)
     
     class Meta:
         model = Track
@@ -105,9 +107,9 @@ class TrackSerializer(serializers.ModelSerializer):
             'id', 'title', 'artist', 'artist_id', 'album', 'album_id',
             'audio_file', 'track_number', 'release_date', 'cover_image',
             'duration', 'play_count', 'likes_count', 'is_explicit',
-            'lyrics', 'genres'
+            'lyrics', 'genres', 'calculated_avg_rating', 'total_plays', 'avg_rating'
         ]
-        read_only_fields = ['play_count', 'likes_count']
+        read_only_fields = ['play_count', 'likes_count', 'calculated_avg_rating', 'total_plays', 'avg_rating']
     
     def validate(self, data):
         """Проверяет уникальность названия трека в альбоме"""
