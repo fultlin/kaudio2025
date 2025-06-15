@@ -351,8 +351,8 @@ class AlbumViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def tracks(self, request, pk=None):
         album = self.get_object()
-        tracks = Track.objects.filter(album=album)
-        serializer = TrackSerializer(tracks, many=True)
+        tracks = album.tracks.all()
+        serializer = TrackSerializer(tracks, many=True, context={'request': request})
         return Response(serializer.data)
     
     @action(detail=True, methods=['get'])
