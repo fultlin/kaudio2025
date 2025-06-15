@@ -50,8 +50,34 @@ const Artist = observer(() => {
         setAlbums(albumsResponse.data);
 
         // Получаем треки артиста (не входящие в альбомы)
-        const tracksResponse = await axios.get(`/artists/${id}/tracks/`);
-        setTracks(tracksResponse.data);
+        let artistTracks = [];
+        try {
+          const tracksResponse = await axios.get(`artists/${id}/tracks/`);
+          artistTracks = Array.isArray(tracksResponse.data)
+            ? tracksResponse.data.filter(
+                (track) =>
+                  track.artist &&
+                  (track.artist.id === Number(id) ||
+                    track.artist === Number(id))
+              )
+            : [];
+        } catch (err) {
+          // Если эндпоинт не работает, пробуем получить все треки и фильтровать по артисту
+          try {
+            const allTracksResponse = await axios.get("tracks/");
+            artistTracks = Array.isArray(allTracksResponse.data)
+              ? allTracksResponse.data.filter(
+                  (track) =>
+                    track.artist &&
+                    (track.artist.id === Number(id) ||
+                      track.artist === Number(id))
+                )
+              : [];
+          } catch (err2) {
+            artistTracks = [];
+          }
+        }
+        setTracks(artistTracks);
 
         setLoading(false);
       } catch (error) {
