@@ -13,7 +13,7 @@ const TrackPage = observer(() => {
   const [track, setTrack] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { user } = authStore;
+  const { user, isAdmin } = authStore;
 
   useEffect(() => {
     const fetchTrack = async () => {
@@ -101,7 +101,7 @@ const TrackPage = observer(() => {
                 {track.play_count} прослушиваний
               </span>
             </div>
-            {user?.role === "admin" && (
+            {isAdmin && (
               <div className={styles.adminControls}>
                 <button onClick={handleEdit} className={styles.editButton}>
                   Редактировать

@@ -21,6 +21,7 @@ import TrackPage from "../pages/TrackPage/component";
 import AlbumPage from "../pages/AlbumPage/component";
 import EditTrackPage from "../pages/EditTrackPage/component";
 import EditAlbumPage from "../pages/EditAlbumPage/component";
+import UserManagement from "../components/UserManagement/component";
 
 const router = createBrowserRouter([
   {
@@ -111,6 +112,10 @@ const router = createBrowserRouter([
       {
         path: "profile",
         element: <Settings />,
+      },
+      {
+        path: "admin/users",
+        element: <UserManagement />,
       },
     ],
   },

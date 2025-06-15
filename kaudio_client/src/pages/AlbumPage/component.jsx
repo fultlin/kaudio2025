@@ -1,9 +1,8 @@
 import { observer } from "mobx-react-lite";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import instance from "../../axios/axios";
 import styles from "./AlbumPage.module.scss";
-import { Link } from "react-router-dom";
 import Reviews from "../../components/Reviews/component";
 import authStore from "../../stores/authStore";
 
@@ -13,7 +12,7 @@ const AlbumPage = observer(() => {
   const [album, setAlbum] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { user } = authStore;
+  const { user, isAdmin } = authStore;
 
   useEffect(() => {
     const fetchAlbum = async () => {
@@ -96,7 +95,7 @@ const AlbumPage = observer(() => {
                 {String(album.total_duration % 60).padStart(2, "0")}
               </span>
             </div>
-            {user?.role === "admin" && (
+            {isAdmin && (
               <div className={styles.adminControls}>
                 <button onClick={handleEdit} className={styles.editButton}>
                   Редактировать

@@ -12,7 +12,7 @@ const Album = observer((props) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = authStore;
+  const { user, isAdmin } = authStore;
 
   const [album, setAlbum] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -310,7 +310,7 @@ const Album = observer((props) => {
               )}
             </button>
 
-            {user?.role === "admin" && (
+            {isAdmin && (
               <button
                 className={styles.editButton}
                 onClick={() =>

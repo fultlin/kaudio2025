@@ -9,6 +9,7 @@ const Sidebar = observer(({ isOpen }) => {
   const navigate = useNavigate();
   const user = authStore.user;
   const isArtist = authStore.isArtist;
+  const isAdmin = authStore.isAdmin;
 
   const handleProfileClick = () => {
     navigate("/settings");
@@ -38,7 +39,9 @@ const Sidebar = observer(({ isOpen }) => {
           </div>
           <div className={styles.profileInfo}>
             <h3>{user.username}</h3>
-            <p>{isArtist ? "Артист" : "Слушатель"}</p>
+            <p>
+              {isAdmin ? "Администратор" : isArtist ? "Артист" : "Слушатель"}
+            </p>
           </div>
         </div>
       )}

@@ -7,6 +7,7 @@ class AuthStore {
   artistProfile = null;
   isAuthenticated = false;
   isArtist = false;
+  isAdmin = false;
   loading = false;
   error = null;
   lastArtistCheck = null;
@@ -17,6 +18,7 @@ class AuthStore {
       user: observable,
       isAuthenticated: observable,
       artistProfile: observable,
+      isAdmin: observable,
       loading: observable,
       error: observable,
       login: action,
@@ -33,8 +35,11 @@ class AuthStore {
   }
 
   setUser = (user) => {
+    console.log("AuthStore.setUser: Получены данные пользователя:", user);
     this.user = user;
     this.isAuthenticated = !!user;
+    this.isAdmin = user?.role === "admin";
+    console.log("AuthStore.setUser: isAdmin установлен в:", this.isAdmin);
   };
 
   setIsAuthenticated(status) {
