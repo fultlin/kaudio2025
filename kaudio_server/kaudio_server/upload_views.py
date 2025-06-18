@@ -151,14 +151,13 @@ class TrackUploadView(APIView):
         print(f"FILES: {request.FILES}")
         print(f"DATA: {request.data}")
         
-        # Получаем артиста только по текущему пользователю
         artist = Artist.objects.filter(user=request.user).first()
         if not artist:
             print("У пользователя нет профиля исполнителя")
             return Response({
                 'error': 'У вас нет профиля исполнителя. Сначала создайте артиста.'
             }, status=status.HTTP_400_BAD_REQUEST)
-        # album_id и остальные поля оставляем как есть
+
         album_id = request.data.get('album_id')
         track_number = request.data.get('track_number')
         duration = request.data.get('duration')

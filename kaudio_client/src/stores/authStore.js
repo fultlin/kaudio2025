@@ -93,25 +93,42 @@ class AuthStore {
 
     try {
       const response = await instance.get(`artists/?user=${this.user.id}`);
+      console.log("AuthStore.checkArtistStatus: Ответ сервера:", response.data);
 
       if (response.data && response.data.length > 0) {
         const artist = response.data[0];
-        console.log("AuthStore.checkArtistStatus: Найден артист", artist);
+        // Проверяем, что артист действительно связан с текущим пользователем
+        if (artist.user && artist.user.id === this.user.id) {
+          console.log("AuthStore.checkArtistStatus: Найден артист", artist);
 
-        // Сохраняем профиль артиста
-        this.setArtistProfile(artist);
+          // Сохраняем профиль артиста
+          this.setArtistProfile(artist);
 
-        // Добавляем информацию об артисте в объект пользователя
-        this.setUser({
-          ...this.user,
-          artist: artist,
-          img_profile_url: this.user.img_profile_url
-            ? getFullImageUrl(this.user.img_profile_url)
-            : null,
-        });
+          // Добавляем информацию об артисте в объект пользователя
+          this.setUser({
+            ...this.user,
+            artist: artist,
+            img_profile_url: this.user.img_profile_url
+              ? getFullImageUrl(this.user.img_profile_url)
+              : null,
+          });
 
-        // Устанавливаем флаг isArtist
-        this.isArtist = true;
+          // Устанавливаем флаг isArtist
+          this.isArtist = true;
+        } else {
+          console.log(
+            "AuthStore.checkArtistStatus: Артист не связан с текущим пользователем"
+          );
+          this.setArtistProfile(null);
+          this.setUser({
+            ...this.user,
+            artist: null,
+            img_profile_url: this.user.img_profile_url
+              ? getFullImageUrl(this.user.img_profile_url)
+              : null,
+          });
+          this.isArtist = false;
+        }
       } else {
         console.log("AuthStore.checkArtistStatus: Артист не найден");
         this.setArtistProfile(null);
@@ -122,8 +139,6 @@ class AuthStore {
             ? getFullImageUrl(this.user.img_profile_url)
             : null,
         });
-
-        // Сбрасываем флаг isArtist
         this.isArtist = false;
       }
     } catch (error) {

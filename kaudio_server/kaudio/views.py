@@ -165,14 +165,19 @@ class ArtistViewSet(viewsets.ModelViewSet):
     ordering_fields = ['monthly_listeners', 'is_verified']
 
     def get_queryset(self):
-        queryset = Artist.objects.all()
+        queryset = Artist.objects.select_related('user').all()
         user_id = self.request.query_params.get('user', None)
         if user_id:
+            # Проверяем только артистов, связанных с пользователем через user_id
             queryset = queryset.filter(user_id=user_id)
+            print(f"[Artist Debug] Фильтрация по user_id={user_id}, найдено артистов: {queryset.count()}")
+            for artist in queryset:
+                print(f"[Artist Debug] Артист: id={artist.id}, user_id={artist.user_id}, email={artist.email}")
         return queryset
 
     def perform_create(self, serializer):
         user = self.request.user
+        # Проверяем, есть ли уже артист с таким user_id
         if Artist.objects.filter(user=user).exists():
             raise PermissionDenied('У вас уже есть профиль исполнителя.')
         serializer.save(user=user, username=user.username, email=user.email)
@@ -299,13 +304,11 @@ class AlbumViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = Album.objects.all()
         
-        # Получаем параметры запроса
         title = self.request.query_params.get('title', None)
         artist = self.request.query_params.get('artist', None)
         genre = self.request.query_params.get('genre', None)
         year = self.request.query_params.get('year', None)
         
-        # Применяем фильтры
         if title:
             queryset = queryset.filter(title__icontains=title)
         if artist:
@@ -593,7 +596,6 @@ class TrackViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def genres(self, request, pk=None):
         track = self.get_object()
-        # Используем values_list для получения только ID жанров
         genre_ids = track.genres.values_list('id', flat=True)
         genres = Genre.objects.filter(id__in=genre_ids)
         serializer = GenreSerializer(genres, many=True)
@@ -604,7 +606,6 @@ class TrackViewSet(viewsets.ModelViewSet):
         """
         Получение статистики по жанрам
         """
-        # Используем values() для агрегации данных
         statistics = Track.objects.values('genres__title').annotate(
             track_count=Count('id'),
             total_duration=Sum('duration'),
@@ -624,7 +625,6 @@ class TrackViewSet(viewsets.ModelViewSet):
         """
         limit = int(request.query_params.get('limit', 10))
         
-        # Используем values() для получения только нужных полей
         tracks = Track.objects.annotate(
             popularity_score=(F('play_count') + F('likes_count') * 2) / (1 + F('duration') / 300)
         ).values(
@@ -644,7 +644,6 @@ class TrackViewSet(viewsets.ModelViewSet):
         """
         limit = int(request.query_params.get('limit', 10))
         
-        # Используем values() для агрегации данных по артистам
         artists = Track.objects.values('artist__email', 'artist__user__username').annotate(
             total_tracks=Count('id'),
             total_duration=Sum('duration'),

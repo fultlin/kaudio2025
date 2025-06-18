@@ -117,7 +117,6 @@ class TrackSerializer(serializers.ModelSerializer):
         album = data.get('album')
         
         if album and title:
-            # Проверяем, существует ли трек с таким же названием в альбоме
             existing_track = Track.objects.filter(
                 album=album,
                 title__iexact=title
@@ -182,7 +181,6 @@ class UserActivitySerializer(serializers.ModelSerializer):
     playlist = PlaylistSerializer(read_only=True)
     artist = ArtistSerializer(read_only=True)
     
-    # Дополнительные поля для удобства
     activity_type_display = serializers.SerializerMethodField()
     formatted_timestamp = serializers.SerializerMethodField()
     
@@ -214,7 +212,6 @@ class UserActivitySerializer(serializers.ModelSerializer):
         if not obj.timestamp:
             return None
             
-        # Если timestamp в UTC, конвертируем в локальное время
         if timezone.is_aware(obj.timestamp):
             local_time = timezone.localtime(obj.timestamp)
         else:

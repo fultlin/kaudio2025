@@ -23,39 +23,31 @@ const UploadForm = observer(() => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Проверяем авторизацию
     if (!authStore.isAuthenticated) {
       setError("Необходимо авторизоваться для загрузки треков");
       return;
     }
 
-    // Загружаем жанры и определяем ID исполнителя (текущего пользователя)
     const fetchData = async () => {
       try {
-        // Получаем жанры
         const genresRes = await instance.get("genres/");
         setGenres(genresRes.data);
 
-        // Находим или создаем запись исполнителя для текущего пользователя
         const userRes = await instance.get("users/me/");
         const userId = userRes.data.id;
 
-        // Получаем исполнителя по user пользователя
         try {
           const artistsRes = await instance.get(
             `artists/?user=${userRes.data.id}`
           );
           if (artistsRes.data && artistsRes.data.length > 0) {
-            // Исполнитель найден
             setArtistId(artistsRes.data[0].id);
 
-            // Получаем альбомы этого исполнителя
             const albumsRes = await instance.get(
               `artists/${artistsRes.data[0].id}/albums/`
             );
             setAlbums(albumsRes.data);
           } else {
-            // Исполнитель не найден, предлагаем создать
             setError(
               "Для вас не создан профиль исполнителя. Обратитесь к администратору."
             );
@@ -73,7 +65,6 @@ const UploadForm = observer(() => {
     fetchData();
   }, []);
 
-  // Обработчик изменения текстовых полей
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -82,11 +73,9 @@ const UploadForm = observer(() => {
     }));
   };
 
-  // Обработчик переключателя использования альбома
   const handleUseAlbumChange = (e) => {
     setUseAlbum(e.target.checked);
     if (!e.target.checked) {
-      // Если снимаем галочку, сбрасываем выбранный альбом
       setFormData((prev) => ({
         ...prev,
         album_id: "",
@@ -94,19 +83,16 @@ const UploadForm = observer(() => {
     }
   };
 
-  // Обработчик изменения файла с автоматическим извлечением длительности
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (!selectedFile) return;
 
     setFile(selectedFile);
 
-    // Извлекаем длительность аудиофайла
     if (selectedFile && selectedFile.type.startsWith("audio/")) {
       const audioElement = document.createElement("audio");
       audioElement.src = URL.createObjectURL(selectedFile);
 
-      // Когда метаданные загружены, получаем длительность
       audioElement.addEventListener("loadedmetadata", () => {
         const durationInSeconds = Math.round(audioElement.duration);
         setFormData((prev) => ({
@@ -116,7 +102,6 @@ const UploadForm = observer(() => {
         console.log(`Длительность трека: ${durationInSeconds} секунд`);
       });
 
-      // Обработка ошибок при загрузке аудио
       audioElement.addEventListener("error", () => {
         console.error("Ошибка при загрузке аудиофайла");
         setError("Не удалось прочитать аудиофайл. Проверьте формат файла.");
