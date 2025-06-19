@@ -7,6 +7,8 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.units import inch
 from django.utils.translation import gettext as _
 from django.db.models import F, ExpressionWrapper, FloatField
+from django.http import HttpResponse
+from typing import List, Any, Union
 import os
 
 # Регистрируем шрифт Montserrat вместо DejaVuSans
@@ -14,8 +16,18 @@ font_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path
                         'kaudio_client', 'src', 'fonts', 'Montserrat-Medium.ttf')
 pdfmetrics.registerFont(TTFont('Montserrat', font_path))
 
-def calculate_popularity_score(track):
-    """Вычисляет рейтинг популярности трека"""
+def calculate_popularity_score(track: 'Track') -> float:
+    """
+    Вычисляет рейтинг популярности трека.
+    
+    Использует взвешенную формулу, учитывающую количество прослушиваний и лайков.
+    
+    Args:
+        track: Объект трека для расчета популярности
+        
+    Returns:
+        float: Рейтинг популярности от 0 до 100
+    """
     play_weight = 0.6
     like_weight = 0.4
     max_plays = 1000  # Нормализующее значение для прослушиваний
@@ -26,8 +38,17 @@ def calculate_popularity_score(track):
     
     return (normalized_plays * play_weight + normalized_likes * like_weight) * 100
 
-def generate_track_pdf(tracks, response):
-    """Генерирует PDF документ со списком треков"""
+def generate_track_pdf(tracks: List['Track'], response: HttpResponse) -> None:
+    """
+    Генерирует PDF документ со списком треков.
+    
+    Создает таблицу с информацией о треках включая название, исполнителя,
+    альбом, длительность, статистику и рейтинг популярности.
+    
+    Args:
+        tracks: Список треков для включения в отчет
+        response: HTTP ответ для записи PDF
+    """
     doc = SimpleDocTemplate(response, pagesize=letter)
     elements = []
     
@@ -86,8 +107,17 @@ def generate_track_pdf(tracks, response):
     elements.append(table)
     doc.build(elements)
 
-def generate_album_pdf(albums, response):
-    """Генерирует PDF документ со списком альбомов"""
+def generate_album_pdf(albums: List['Album'], response: HttpResponse) -> None:
+    """
+    Генерирует PDF документ со списком альбомов.
+    
+    Создает таблицу с информацией об альбомах включая название, исполнителя,
+    дату выпуска, количество треков, длительность и жанры.
+    
+    Args:
+        albums: Список альбомов для включения в отчет
+        response: HTTP ответ для записи PDF
+    """
     doc = SimpleDocTemplate(response, pagesize=letter)
     elements = []
     

@@ -12,24 +12,75 @@ const Reviews = observer(({ type, id }) => {
   const [reviewText, setReviewText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [canReview, setCanReview] = useState(false);
 
   const { user } = authStore;
 
   useEffect(() => {
     fetchReviews();
-  }, [type, id]);
+    checkCanReview();
+  }, [type, id, user]);
 
   const fetchReviews = async () => {
     try {
-      const response = await instance.get(
-        `${type.replace("s", "")}-reviews/?${type.replace("s", "")}_id=${id}`
-      );
-      if (response.status === 200) {
-        setReviews(response.data);
+      let response;
+      if (type === "tracks") {
+        response = await instance.get("/optimized/reviews/");
+        if (response.status === 200 && response.data && response.data.data) {
+          setReviews(response.data.data);
+        }
+      } else if (type === "playlists") {
+        response = await instance.get("/optimized/playlists/");
+        if (response.status === 200 && response.data && response.data.data) {
+          const allReviews = response.data.data.flatMap(
+            (pl) => pl.reviews || []
+          );
+          setReviews(allReviews);
+        }
+      } else {
+        response = await instance.get(
+          `${type.replace("s", "")}-reviews/?${type.replace("s", "")}_id=${id}`
+        );
+        if (response.status === 200) {
+          setReviews(response.data);
+        }
       }
     } catch (error) {
       console.error("Ошибка при загрузке отзывов:", error);
       setError("Не удалось загрузить отзывы");
+    }
+  };
+
+  const checkCanReview = async () => {
+    if (!user) {
+      setCanReview(false);
+      return;
+    }
+    try {
+      let url = "";
+      if (type === "tracks") {
+        url = `/user-activities/?user_id=${user.id}&activity_type=play&track_id=${id}`;
+      } else if (type === "albums") {
+        url = `/user-activities/?user_id=${user.id}&activity_type=play&album_id=${id}`;
+      }
+      const response = await instance.get(url);
+      if (type === "tracks") {
+        setCanReview(
+          Array.isArray(response.data) &&
+            response.data.some(
+              (activity) => activity.track && activity.track.id == id
+            )
+        );
+      } else if (type === "albums") {
+        setCanReview(
+          Array.isArray(response.data) &&
+            response.data.some(
+              (activity) => activity.album && activity.album.id == id
+            )
+        );
+      }
+    } catch (e) {
+      setCanReview(false);
     }
   };
 
@@ -101,7 +152,7 @@ const Reviews = observer(({ type, id }) => {
     <div className={styles.reviewsContainer}>
       <div className={styles.reviewsHeader}>
         <h3 className={styles.reviewsTitle}>Отзывы</h3>
-        {user && (
+        {user && canReview && (
           <button
             className={styles.addReviewButton}
             onClick={() => setShowForm(!showForm)}
@@ -111,9 +162,21 @@ const Reviews = observer(({ type, id }) => {
         )}
       </div>
 
+      {user && !canReview && (
+        <div className={styles.error}>
+          Вы не можете оставить отзыв на{" "}
+          {type === "tracks"
+            ? "трек"
+            : type === "playlists"
+            ? "плейлист"
+            : "альбом"}
+          , который не прослушивали.
+        </div>
+      )}
+
       {error && <div className={styles.error}>{error}</div>}
 
-      {showForm && (
+      {showForm && canReview && (
         <form className={styles.reviewForm} onSubmit={handleSubmit}>
           <div className={styles.formGroup}>
             <div className={styles.ratingGroup}>
@@ -148,7 +211,9 @@ const Reviews = observer(({ type, id }) => {
         {reviews.map((review) => (
           <div key={review.id} className={styles.reviewItem}>
             <div className={styles.reviewHeader}>
-              <span className={styles.reviewAuthor}>{review.author}</span>
+              <span className={styles.reviewAuthor}>
+                {review.author?.username || review.author?.email || "Аноним"}
+              </span>
               <span className={styles.reviewDate}>
                 {new Date(review.created_at).toLocaleDateString()}
               </span>

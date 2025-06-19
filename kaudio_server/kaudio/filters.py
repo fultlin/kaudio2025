@@ -1,7 +1,23 @@
 import django_filters
+from django_filters import FilterSet
+from typing import Dict, Any, List
 from .models import Track, Album, Artist, Playlist, UserActivity
 
-class TrackFilter(django_filters.FilterSet):
+
+class TrackFilter(FilterSet):
+    """
+    Фильтр для модели Track.
+    
+    Предоставляет фильтрацию треков по различным критериям:
+    - Название трека
+    - Исполнитель
+    - Альбом
+    - Жанр
+    - Год выпуска
+    - Продолжительность
+    - Рейтинг
+    - Содержание ненормативной лексики
+    """
     title = django_filters.CharFilter(lookup_expr='icontains')
     artist = django_filters.CharFilter(field_name='artist__user__username', lookup_expr='icontains')
     album = django_filters.CharFilter(field_name='album__title', lookup_expr='icontains')
@@ -17,7 +33,19 @@ class TrackFilter(django_filters.FilterSet):
         model = Track
         fields = ['title', 'artist', 'album', 'genre', 'year', 'is_explicit']
 
-class AlbumFilter(django_filters.FilterSet):
+
+class AlbumFilter(FilterSet):
+    """
+    Фильтр для модели Album.
+    
+    Предоставляет фильтрацию альбомов по различным критериям:
+    - Название альбома
+    - Исполнитель
+    - Жанр
+    - Год выпуска
+    - Количество треков
+    - Общая продолжительность
+    """
     title = django_filters.CharFilter(lookup_expr='icontains')
     artist = django_filters.CharFilter(field_name='artist__user__username', lookup_expr='icontains')
     genre = django_filters.CharFilter(field_name='genres__title', lookup_expr='icontains')
@@ -31,7 +59,18 @@ class AlbumFilter(django_filters.FilterSet):
         model = Album
         fields = ['title', 'artist', 'genre', 'year']
 
-class ArtistFilter(django_filters.FilterSet):
+
+class ArtistFilter(FilterSet):
+    """
+    Фильтр для модели Artist.
+    
+    Предоставляет фильтрацию исполнителей по различным критериям:
+    - Имя пользователя
+    - Email
+    - Биография
+    - Статус верификации
+    - Количество слушателей
+    """
     username = django_filters.CharFilter(lookup_expr='icontains')
     email = django_filters.CharFilter(lookup_expr='icontains')
     bio = django_filters.CharFilter(lookup_expr='icontains')
@@ -43,7 +82,19 @@ class ArtistFilter(django_filters.FilterSet):
         model = Artist
         fields = ['username', 'email', 'is_verified']
 
-class PlaylistFilter(django_filters.FilterSet):
+
+class PlaylistFilter(FilterSet):
+    """
+    Фильтр для модели Playlist.
+    
+    Предоставляет фильтрацию плейлистов по различным критериям:
+    - Название плейлиста
+    - Пользователь
+    - Публичность
+    - Количество треков
+    - Общая продолжительность
+    - Дата создания
+    """
     title = django_filters.CharFilter(lookup_expr='icontains')
     user = django_filters.CharFilter(field_name='user__username', lookup_expr='icontains')
     is_public = django_filters.BooleanFilter()
@@ -58,7 +109,20 @@ class PlaylistFilter(django_filters.FilterSet):
         model = Playlist
         fields = ['title', 'user', 'is_public']
 
-class UserActivityFilter(django_filters.FilterSet):
+
+class UserActivityFilter(FilterSet):
+    """
+    Фильтр для модели UserActivity.
+    
+    Предоставляет фильтрацию активностей пользователей по различным критериям:
+    - Пользователь
+    - Тип активности
+    - Трек
+    - Альбом
+    - Исполнитель
+    - Продолжительность
+    - Временной период
+    """
     user = django_filters.CharFilter(field_name='user__username', lookup_expr='icontains')
     activity_type = django_filters.ChoiceFilter(choices=UserActivity.ACTIVITY_TYPES)
     track = django_filters.CharFilter(field_name='track__title', lookup_expr='icontains')

@@ -1,7 +1,8 @@
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action, api_view, permission_classes, parser_classes
 from rest_framework.response import Response
-from django.db.models import Q, Sum, Count, Avg, F, Prefetch
+from rest_framework.request import Request
+from django.db.models import Q, Sum, Count, Avg, F, Prefetch, QuerySet
 from .models import (
     Statistics, User, Artist, Genre, Album, Track, Playlist, UserActivity,
     Subscribe, UserSubscribe, UserAlbum, UserTrack, PlaylistTrack,
@@ -35,11 +36,27 @@ from django.db import connection
 import time
 from .filters import TrackFilter, AlbumFilter, ArtistFilter, PlaylistFilter, UserActivityFilter
 import django_filters.rest_framework
+from typing import Dict, Any, Optional, List, Union, Callable, TypeVar, cast
+from django.core.files.uploadedfile import UploadedFile
 
 logger = logging.getLogger(__name__)
 
-def log_query_performance(func):
-    def wrapper(*args, **kwargs):
+T = TypeVar('T')
+
+
+def log_query_performance(func: Callable[..., T]) -> Callable[..., T]:
+    """
+    Декоратор для логирования производительности запросов.
+    
+    Логирует время выполнения и количество SQL запросов для функции.
+    
+    Args:
+        func: Функция для обертывания
+        
+    Returns:
+        Callable[..., T]: Обернутая функция
+    """
+    def wrapper(*args: Any, **kwargs: Any) -> T:
         start_time = time.time()
         queries_before = len(connection.queries)
         
@@ -57,44 +74,102 @@ def log_query_performance(func):
         return result
     return wrapper
 
+
 class UserViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet для работы с пользователями.
+    
+    Предоставляет CRUD операции для пользователей с различными правами доступа
+    в зависимости от действия.
+    """
     queryset = User.objects.all()
     serializer_class = UserSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['username', 'email']
     ordering_fields = ['username', 'date_joined']
     
-    def get_permissions(self):
+    def get_permissions(self) -> List[permissions.BasePermission]:
+        """
+        Определяет права доступа в зависимости от действия.
+        
+        Returns:
+            List[permissions.BasePermission]: Список классов разрешений
+        """
         if self.action == 'create':
             permission_classes = [AllowAny]
         else:
             permission_classes = [IsAuthenticated]
         return [permission() for permission in permission_classes]
 
-    def update(self, request, *args, **kwargs):
+    def update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """
+        Обновляет пользователя.
+        
+        Обрабатывает пустые значения для img_profile_url.
+        
+        Args:
+            request: HTTP запрос
+            *args: Позиционные аргументы
+            **kwargs: Именованные аргументы
+            
+        Returns:
+            Response: HTTP ответ
+        """
         if 'img_profile_url' in request.data and request.data['img_profile_url'] == '':
             request.data['img_profile_url'] = None
         
         return super().update(request, *args, **kwargs)
         
-    def partial_update(self, request, *args, **kwargs):
+    def partial_update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """
+        Частично обновляет пользователя.
+        
+        Обрабатывает пустые значения для img_profile_url.
+        
+        Args:
+            request: HTTP запрос
+            *args: Позиционные аргументы
+            **kwargs: Именованные аргументы
+            
+        Returns:
+            Response: HTTP ответ
+        """
         if 'img_profile_url' in request.data and request.data['img_profile_url'] == '':
             request.data['img_profile_url'] = None
         
         return super().partial_update(request, *args, **kwargs)
 
     @action(detail=True, methods=['get'])
-    def playlists(self, request, pk=None):
+    def playlists(self, request: Request, pk: Optional[str] = None) -> Response:
+        """
+        Получает плейлисты пользователя.
+        
+        Args:
+            request: HTTP запрос
+            pk: ID пользователя
+            
+        Returns:
+            Response: Список плейлистов пользователя
+        """
         user = self.get_object()
         playlists = Playlist.objects.filter(user=user)
         serializer = PlaylistSerializer(playlists, many=True)
         return Response(serializer.data)
 
     @action(detail=True, methods=['get'])
-    def activities(self, request, pk=None):
+    def activities(self, request: Request, pk: Optional[str] = None) -> Response:
+        """
+        Получает активности пользователя.
+        
+        Args:
+            request: HTTP запрос
+            pk: ID пользователя
+            
+        Returns:
+            Response: Список активностей пользователя
+        """
         try:
             user = self.get_object()
-            print(f"[UserActivity Debug] Получение активностей для пользователя {user.username}")
             
             # Проверяем, что пользователь запрашивает свои активности или является администратором
             if request.user != user and not request.user.is_staff:
@@ -113,7 +188,6 @@ class UserViewSet(viewsets.ModelViewSet):
                 'artist'
             ).filter(user=user).order_by('-timestamp')
             
-            print(f"[UserActivity Debug] Найдено активностей: {activities.count()}")
             
             # Сериализуем данные с контекстом request
             serializer = UserActivitySerializer(activities, many=True, context={'request': request})
@@ -129,33 +203,77 @@ class UserViewSet(viewsets.ModelViewSet):
             )
 
     @action(detail=True, methods=['get'])
-    def subscribes(self, request, pk=None):
+    def subscribes(self, request: Request, pk: Optional[str] = None) -> Response:
+        """
+        Получает подписки пользователя.
+        
+        Args:
+            request: HTTP запрос
+            pk: ID пользователя
+            
+        Returns:
+            Response: Список подписок пользователя
+        """
         user = self.get_object()
         subscribes = UserSubscribe.objects.filter(user=user)
         serializer = UserSubscribeSerializer(subscribes, many=True)
         return Response(serializer.data)
     
     @action(detail=True, methods=['get'])
-    def albums(self, request, pk=None):
+    def albums(self, request: Request, pk: Optional[str] = None) -> Response:
+        """
+        Получает альбомы пользователя.
+        
+        Args:
+            request: HTTP запрос
+            pk: ID пользователя
+            
+        Returns:
+            Response: Список альбомов пользователя
+        """
         user = self.get_object()
         user_albums = UserAlbum.objects.filter(user=user)
         serializer = UserAlbumSerializer(user_albums, many=True)
         return Response(serializer.data)
     
     @action(detail=True, methods=['get'])
-    def tracks(self, request, pk=None):
+    def tracks(self, request: Request, pk: Optional[str] = None) -> Response:
+        """
+        Получает треки пользователя.
+        
+        Args:
+            request: HTTP запрос
+            pk: ID пользователя
+            
+        Returns:
+            Response: Список треков пользователя
+        """
         user = self.get_object()
         user_tracks = UserTrack.objects.filter(user=user)
         serializer = UserTrackSerializer(user_tracks, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
-    def me(self, request):
+    def me(self, request: Request) -> Response:
+        """
+        Получает информацию о текущем пользователе.
+        
+        Args:
+            request: HTTP запрос
+            
+        Returns:
+            Response: Информация о текущем пользователе
+        """
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
 
 
 class ArtistViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet для работы с исполнителями.
+    
+    Предоставляет CRUD операции для исполнителей с фильтрацией и поиском.
+    """
     queryset = Artist.objects.all()
     serializer_class = ArtistSerializer
     permission_classes = [IsAuthenticated]
@@ -164,25 +282,68 @@ class ArtistViewSet(viewsets.ModelViewSet):
     search_fields = ['email', 'bio', 'user__username']
     ordering_fields = ['monthly_listeners', 'is_verified']
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Artist]:
+        """
+        Получает queryset исполнителей с фильтрацией по пользователю и поиску.
+        
+        Returns:
+            QuerySet[Artist]: Отфильтрованный queryset исполнителей
+        """
         queryset = Artist.objects.select_related('user').all()
         user_id = self.request.query_params.get('user', None)
-        if user_id:
-            # Проверяем только артистов, связанных с пользователем через user_id
-            queryset = queryset.filter(user_id=user_id)
-            print(f"[Artist Debug] Фильтрация по user_id={user_id}, найдено артистов: {queryset.count()}")
-            for artist in queryset:
-                print(f"[Artist Debug] Артист: id={artist.id}, user_id={artist.user_id}, email={artist.email}")
-        return queryset
+        search = self.request.query_params.get('search', None)
 
-    def perform_create(self, serializer):
+        if user_id:
+            try:
+                user = User.objects.get(id=user_id)
+                if user.email:
+                    queryset = queryset.filter(email=user.email)
+                else:
+                    queryset = queryset.none()
+            except User.DoesNotExist:
+                queryset = queryset.none()
+
+        if search:
+            search = search.lower()
+            queryset = queryset.annotate(
+                username_lower=Lower('user__username')
+            ).filter(username_lower__contains=search)
+
+        return queryset.distinct()
+
+    def perform_create(self, serializer: ArtistSerializer) -> None:
+        """
+        Создает исполнителя.
+        
+        Проверяем, что у пользователя еще нет профиля исполнителя.
+        
+        Args:
+            serializer: Сериализатор с данными исполнителя
+            
+        Raises:
+            PermissionDenied: Если у пользователя уже есть профиль исполнителя
+        """
         user = self.request.user
+        
         # Проверяем, есть ли уже артист с таким user_id
-        if Artist.objects.filter(user=user).exists():
+        existing_artist = Artist.objects.filter(user=user).first()
+        if existing_artist:
             raise PermissionDenied('У вас уже есть профиль исполнителя.')
+        
         serializer.save(user=user, username=user.username, email=user.email)
 
-    def perform_update(self, serializer):
+    def perform_update(self, serializer: ArtistSerializer) -> None:
+        """
+        Обновляет исполнителя.
+        
+        Проверяет права доступа и сохраняет неизменные поля.
+        
+        Args:
+            serializer: Сериализатор с данными исполнителя
+            
+        Raises:
+            PermissionDenied: Если пользователь пытается редактировать чужой профиль
+        """
         instance = self.get_object()
         if instance.user != self.request.user:
             raise PermissionDenied('Вы не можете редактировать чужой профиль исполнителя.')
@@ -190,21 +351,28 @@ class ArtistViewSet(viewsets.ModelViewSet):
         serializer.save(username=instance.user.username, email=instance.user.email)
 
     def list(self, request, *args, **kwargs):
+        """
+        Получает список исполнителей с поиском.
+        
+        Args:
+            request: HTTP запрос
+            *args: Позиционные аргументы
+            **kwargs: Именованные аргументы
+            
+        Returns:
+            Response: Список исполнителей
+        """
         search = request.query_params.get('search', '')
-        print(f"\n[Artist Search Debug] ====== НАЧАЛО ПОИСКА АРТИСТОВ ======")
-        print(f"[Artist Search Debug] Поисковый запрос: '{search}'")
         
         if not search:
             return super().list(request, *args, **kwargs)
 
         queryset = Artist.objects.select_related('user').all()
-        print(f"[Artist Search Debug] Всего артистов в базе: {queryset.count()}")
 
         exact_matches = queryset.filter(
             Q(user__username__iexact=search) |
             Q(email__iexact=search)
         )
-        print(f"[Artist Search Debug] Найдено точных совпадений: {exact_matches.count()}")
         for artist in exact_matches:
             print(f"[Artist Search Debug] Точное совпадение: username={artist.user.username if artist.user else 'None'}, email={artist.email}")
 
@@ -216,33 +384,11 @@ class ArtistViewSet(viewsets.ModelViewSet):
         else:
             queryset = exact_matches
 
-        print(f"[Artist Search Debug] Итоговое количество результатов: {queryset.count()}")
         for artist in queryset:
             print(f"[Artist Search Debug] Найден артист: username={artist.user.username if artist.user else 'None'}, email={artist.email}")
-        print(f"[Artist Search Debug] ====== КОНЕЦ ПОИСКА АРТИСТОВ ======\n")
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
-
-    def get_queryset(self):
-        queryset = Artist.objects.select_related('user').all()
-        search = self.request.query_params.get('search', None)
-        
-        if search:
-            search = search.lower()
-            print(f"[Artist Search Debug] Поисковый запрос (в нижнем регистре): {search}")
-            
-            queryset = queryset.annotate(
-                username_lower=Lower('user__username')
-            ).filter(username_lower__contains=search)
-            
-            print(f"[Artist Search Debug] SQL: {str(queryset.query)}")
-            artists = list(queryset)
-            print(f"[Artist Search Debug] Найдено артистов: {len(artists)}")
-            for artist in artists:
-                print(f"[Artist Search Debug] Артист: {artist.user.username if artist.user else 'No username'}")
-        
-        return queryset.distinct()
 
     def update(self, request, *args, **kwargs):
         if 'img_cover_url' in request.data and request.data['img_cover_url'] == '':
@@ -368,7 +514,6 @@ class AlbumViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def like(self, request, pk=None):
         album = self.get_object()
-        print(f"Добавление лайка альбома {album.id} пользователем {request.user.username} (ID: {request.user.id})")
         
         album.likes_count += 1
         album.save()
@@ -382,7 +527,6 @@ class AlbumViewSet(viewsets.ModelViewSet):
             ).first()
             
             if existing_activity:
-                print(f"Активность 'like_album' уже существует: ID={existing_activity.id}")
                 activity_serializer = UserActivitySerializer(existing_activity)
                 return Response({
                     'album': self.get_serializer(album).data,
@@ -397,13 +541,11 @@ class AlbumViewSet(viewsets.ModelViewSet):
             )
             
             if not activity.album:
-                print(f"ВНИМАНИЕ: Альбом не сохранен в активности, исправляем...")
                 activity.album = album
                 activity.save()
             
             activity_serializer = UserActivitySerializer(activity)
             
-            print(f"Активность 'like_album' создана: ID={activity.id}, связана с альбомом ID={activity.album.id if activity.album else None}")
             
             return Response({
                 'album': self.get_serializer(album).data,
@@ -421,7 +563,6 @@ class AlbumViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['delete'])
     def unlike(self, request, pk=None):
         album = self.get_object()
-        print(f"Удаление лайка у альбома {album.id} пользователем {request.user.username} (ID: {request.user.id})")
         
         if album.likes_count > 0:
             album.likes_count -= 1
@@ -435,14 +576,12 @@ class AlbumViewSet(viewsets.ModelViewSet):
                 album=album
             ).delete()
             
-            print(f"Удалено активностей: {deleted}")
             
             return Response({
                 'album': self.get_serializer(album).data,
                 'status': 'unliked'
             })
         except Exception as e:
-            print(f"Ошибка при удалении активности: {str(e)}")
             return Response(self.get_serializer(album).data)
 
 
@@ -454,39 +593,23 @@ class TrackViewSet(viewsets.ModelViewSet):
     search_fields = ['title', 'artist__user__username', 'album__title']
     ordering_fields = ['release_date', 'play_count', 'likes_count', 'duration', 'avg_rating']
 
-    @log_query_performance
-    def get_queryset(self):
-        logger.info("TrackViewSet: Начало получения списка треков")
-        # Оптимизированный запрос с использованием select_related и prefetch_related
-        queryset = Track.objects.select_related(
-            'artist',
-            'artist__user',
-            'album'
-        ).prefetch_related(
-            'genres',
-            Prefetch('trackgenre_set', queryset=TrackGenre.objects.select_related('genre'))
-        ).annotate(
-            calculated_avg_rating=Avg('reviews__rating'),
-            total_plays=Count('user_activities', filter=Q(user_activities__activity_type='play'))
-        )
-        
-        logger.info(f"TrackViewSet: Найдено {queryset.count()} треков")
-        return queryset.distinct()
+    def get_queryset(self) -> QuerySet[Track]:
+        """
+        Возвращает базовый queryset треков для работы фильтрации.
+        """
+        return Track.objects.all()
 
     def list(self, request, *args, **kwargs):
-        search = request.query_params.get('search', '')
-        
-        if not search:
-            return super().list(request, *args, **kwargs)
+        """
+        Получает список треков с применением фильтрации, аннотаций и предзагрузки связанных данных.
+        """
+        queryset = self.filter_queryset(get_optimized_tracks_queryset(request))
+        logger.info(f"TrackViewSet: Найдено {queryset.count()} треков")
 
-        queryset = self.filter_queryset(self.get_queryset()) 
-
-        results_info = queryset.values('title', 'artist__user__username', 'artist__email')
-        for track in results_info:
-            artist_info = f"username={track['artist__user__username'] or 'None'}, email={track['artist__email'] or 'None'}"
-            print(f"[Search Debug] Трек: {track['title']} | Артист: {artist_info}")
-        print(f"[Search Debug] ====== КОНЕЦ ПОИСКА ТРЕКОВ ======\n")
-
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -525,7 +648,7 @@ class TrackViewSet(viewsets.ModelViewSet):
                     duration=request.data.get('duration', track.duration)
                 )
             
-            activity_serializer = UserActivitySerializer(activity)
+            activity_serializer = UserActivitySerializer(activity, context={'request': request})
             
             artist = track.artist
             artist.monthly_listeners += 1
@@ -536,13 +659,13 @@ class TrackViewSet(viewsets.ModelViewSet):
                 'activity': activity_serializer.data
             })
         except Exception as e:
-            print(f"Ошибка при создании активности: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return Response(self.get_serializer(track).data)
 
     @action(detail=True, methods=['post'])
     def like(self, request, pk=None):
         track = self.get_object()
-        print(f"Добавление лайка треку {track.id} пользователем {request.user.username} (ID: {request.user.id})")
         
         track.likes_count += 1
         track.save()
@@ -556,7 +679,6 @@ class TrackViewSet(viewsets.ModelViewSet):
             )
             activity_serializer = UserActivitySerializer(activity)
             
-            print(f"Активность 'like' создана: ID={activity.id}")
             
             return Response({
                 'track': self.get_serializer(track).data,
@@ -569,7 +691,6 @@ class TrackViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['delete'])
     def unlike(self, request, pk=None):
         track = self.get_object()
-        print(f"Удаление лайка у трека {track.id} пользователем {request.user.username} (ID: {request.user.id})")
         
         if track.likes_count > 0:
             track.likes_count -= 1
@@ -583,7 +704,6 @@ class TrackViewSet(viewsets.ModelViewSet):
                 track=track
             ).delete()
             
-            print(f"Удалено активностей: {deleted}")
             
             return Response({
                 'track': self.get_serializer(track).data,
@@ -666,9 +786,13 @@ class PlaylistViewSet(viewsets.ModelViewSet):
     ordering_fields = ['creation_date', 'total_tracks', 'total_duration']
 
     @log_query_performance
-    def get_queryset(self):
-        logger.info("PlaylistViewSet: Начало получения списка плейлистов")
-        # Оптимизированный запрос с использованием select_related и prefetch_related
+    def get_queryset(self) -> QuerySet[Playlist]:
+        """
+        Получает queryset плейлистов с учетом фильтрации по пользователю и публичности.
+
+        Returns:
+            QuerySet[Playlist]: Отфильтрованный queryset плейлистов
+        """
         queryset = Playlist.objects.select_related(
             'user'
         ).prefetch_related(
@@ -793,7 +917,6 @@ class UserActivityViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        print(f"[UserActivityViewSet Debug] Получение активностей для пользователя {self.request.user.username}")
         
         # Базовый QuerySet с предзагрузкой связанных данных
         queryset = UserActivity.objects.select_related(
@@ -809,10 +932,8 @@ class UserActivityViewSet(viewsets.ModelViewSet):
         # Фильтруем по пользователю, если указан user_id
         user_id = self.request.query_params.get('user_id')
         if user_id:
-            print(f"[UserActivityViewSet Debug] Фильтрация по user_id: {user_id}")
             # Проверяем права доступа
             if str(self.request.user.id) != str(user_id) and not self.request.user.is_staff:
-                print(f"[UserActivityViewSet Debug] Отказано в доступе: пользователь {self.request.user.username} пытается получить активности пользователя {user_id}")
                 return UserActivity.objects.none()
             queryset = queryset.filter(user_id=user_id)
         else:
@@ -822,13 +943,11 @@ class UserActivityViewSet(viewsets.ModelViewSet):
         # Фильтруем по типу активности, если указан
         activity_type = self.request.query_params.get('activity_type')
         if activity_type:
-            print(f"[UserActivityViewSet Debug] Фильтрация по activity_type: {activity_type}")
             queryset = queryset.filter(activity_type=activity_type)
         
         # Сортируем по времени
         queryset = queryset.order_by('-timestamp')
         
-        print(f"[UserActivityViewSet Debug] Найдено активностей: {queryset.count()}")
         return queryset
 
 
@@ -846,7 +965,13 @@ class UserSubscribeViewSet(viewsets.ModelViewSet):
     search_fields = ['user__username', 'subscribe__type']
     ordering_fields = ['start_date', 'end_date']
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[UserSubscribe]:
+        """
+        Получает queryset подписок пользователя с фильтрацией по user_id.
+
+        Returns:
+            QuerySet[UserSubscribe]: Отфильтрованный queryset подписок пользователя
+        """
         queryset = UserSubscribe.objects.all()
         
         user_id = self.request.query_params.get('user_id', None)
@@ -863,7 +988,13 @@ class UserAlbumViewSet(viewsets.ModelViewSet):
     search_fields = ['user__username', 'album__title']
     ordering_fields = ['position', 'added_at']
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[UserAlbum]:
+        """
+        Получает queryset альбомов пользователя с фильтрацией по user_id.
+
+        Returns:
+            QuerySet[UserAlbum]: Отфильтрованный queryset альбомов пользователя
+        """
         queryset = UserAlbum.objects.all()
         
         user_id = self.request.query_params.get('user_id', None)
@@ -880,7 +1011,13 @@ class UserTrackViewSet(viewsets.ModelViewSet):
     search_fields = ['user__username', 'track__title']
     ordering_fields = ['position', 'added_at']
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[UserTrack]:
+        """
+        Получает queryset треков пользователя с фильтрацией по user_id.
+
+        Returns:
+            QuerySet[UserTrack]: Отфильтрованный queryset треков пользователя
+        """
         queryset = UserTrack.objects.all()
         
         user_id = self.request.query_params.get('user_id', None)
@@ -897,7 +1034,13 @@ class PlaylistTrackViewSet(viewsets.ModelViewSet):
     search_fields = ['playlist__title', 'track__title']
     ordering_fields = ['position', 'added_at']
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[PlaylistTrack]:
+        """
+        Получает queryset связей плейлист-трек с фильтрацией по playlist_id.
+
+        Returns:
+            QuerySet[PlaylistTrack]: Отфильтрованный queryset связей плейлист-трек
+        """
         queryset = PlaylistTrack.objects.all()
         
         playlist_id = self.request.query_params.get('playlist_id', None)
@@ -913,7 +1056,13 @@ class AlbumGenreViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['album__title', 'genre__title']
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[AlbumGenre]:
+        """
+        Получает queryset связей альбом-жанр с фильтрацией по album_id и genre_id.
+
+        Returns:
+            QuerySet[AlbumGenre]: Отфильтрованный queryset связей альбом-жанр
+        """
         queryset = AlbumGenre.objects.all()
         
         album_id = self.request.query_params.get('album_id', None)
@@ -933,7 +1082,13 @@ class TrackGenreViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['track__title', 'genre__title']
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[TrackGenre]:
+        """
+        Получает queryset связей трек-жанр с фильтрацией по track_id и genre_id.
+
+        Returns:
+            QuerySet[TrackGenre]: Отфильтрованный queryset связей трек-жанр
+        """
         queryset = TrackGenre.objects.all()
         
         track_id = self.request.query_params.get('track_id', None)
@@ -1010,10 +1165,6 @@ def register_view(request):
 @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])
 def upload_track_view(request):
-    print("Вызван upload_track!")
-    print(f"HTTP метод: {request.method}")
-    print(f"FILES: {request.FILES}")
-    print(f"DATA: {request.data}")
     
     title = request.data.get('title')
     artist_id = request.data.get('artist_id')
@@ -1090,9 +1241,6 @@ class ArtistPhotoUploadView(APIView):
     
     def post(self, request, format=None):
         """Загрузка изображения исполнителя"""
-        print("ArtistImageUploadView POST вызван.")
-        print(f"FILES: {request.FILES}")
-        print(f"DATA: {request.data}")
         
         if 'image' not in request.FILES:
             return Response({
@@ -1240,6 +1388,30 @@ class TrackReviewViewSet(ReviewViewSet):
         serializer.save(author=self.request.user)
         logger.info(f"TrackReviewViewSet: Отзыв успешно создан")
 
+    def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Валидация отзыва на трек.
+        Проверяет, что пользователь не оставлял отзыв на этот трек ранее
+        и что он действительно прослушивал этот трек.
+        """
+        user = self.context['request'].user
+        track = data.get('track')
+
+        # Проверка на уникальность отзыва
+        if TrackReview.objects.filter(author=user, track=track).exists():
+            raise serializers.ValidationError(
+                'Вы уже оставляли отзыв на этот трек'
+            )
+
+        # Проверка на факт прослушивания
+        has_play = UserActivity.objects.filter(user=user, track=track, activity_type='play').exists()
+        if not has_play:
+            raise serializers.ValidationError(
+                'Вы не можете оставить отзыв на трек, который не прослушивали.'
+            )
+
+        return data
+
 
 class AlbumReviewViewSet(ReviewViewSet):
     queryset = AlbumReview.objects.all()
@@ -1349,37 +1521,28 @@ def get_user_activity(request):
 
     return Response(data) 
 
+def get_optimized_tracks_queryset(request, filters=None):
+    qs = Track.objects.select_related(
+        'artist',
+        'album'
+    ).prefetch_related(
+        'genres',
+        Prefetch('trackgenre_set', queryset=TrackGenre.objects.select_related('genre'))
+    ).annotate(
+        calculated_avg_rating=Avg('reviews__rating'),
+        total_plays=Count('user_activities', filter=Q(user_activities__activity_type='play'))
+    )
+    if filters:
+        qs = qs.filter(**filters)
+    return qs
+
 class OptimizedTrackListView(APIView):
     permission_classes = [IsAuthenticated]
     
     def get(self, request, format=None):
-        """
-        Оптимизированное получение списка треков с альбомами и исполнителями
-        """
-        logger.info("OptimizedTrackListView: Получение списка треков")
-        try:
-            tracks = Track.objects.select_related(
-                'artist',
-                'album'
-            ).prefetch_related(
-                'genres',
-                Prefetch('trackgenre_set', queryset=TrackGenre.objects.select_related('genre'))
-            ).all()
-            
-            logger.info(f"OptimizedTrackListView: Найдено {tracks.count()} треков")
-            
-            serializer = TrackSerializer(tracks, many=True, context={'request': request})
-            return Response({
-                'status': 'success',
-                'data': serializer.data
-            }, status=status.HTTP_200_OK)
-            
-        except Exception as e:
-            logger.error(f"OptimizedTrackListView: Ошибка при получении треков - {str(e)}")
-            return Response({
-                'status': 'error',
-                'message': str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        queryset = get_optimized_tracks_queryset(request)
+        serializer = TrackSerializer(queryset, many=True, context={'request': request})
+        return Response({'status': 'success', 'data': serializer.data})
 
 class OptimizedPlaylistListView(APIView):
     permission_classes = [IsAuthenticated]
@@ -1423,11 +1586,11 @@ class OptimizedUserReviewsView(APIView):
         logger.info("OptimizedUserReviewsView: Получение отзывов пользователя")
         try:
             reviews = TrackReview.objects.select_related(
-                'user',
+                'author',
                 'track',
                 'track__artist',
                 'track__album'
-            ).filter(user=request.user)
+            ).filter(author=request.user)
             
             logger.info(f"OptimizedUserReviewsView: Найдено {reviews.count()} отзывов")
             

@@ -1,18 +1,24 @@
 """
-URL configuration for kaudio_server project.
+URL конфигурация для проекта kaudio_server.
 
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+Основной файл конфигурации URL для Django проекта KAudio.
+Включает маршруты для:
+- Административной панели Django
+- API эндпоинтов приложения kaudio
+- Загрузки файлов (изображения, треки)
+- Swagger документации API
+- Обслуживания медиа файлов
+
+Примеры использования:
+Function views:
+    1. Добавить импорт: from my_app import views
+    2. Добавить URL: path('', views.home, name='home')
+Class-based views:
+    1. Добавить импорт: from other_app.views import Home
+    2. Добавить URL: path('', Home.as_view(), name='home')
+Including another URLconf:
+    1. Импортировать include(): from django.urls import include, path
+    2. Добавить URL: path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
 from django.urls import path, include, re_path
@@ -35,6 +41,7 @@ from django.db.models import Sum
 from kaudio.models import Track, Artist, Album, Genre, TrackGenre
 from kaudio.serializers import TrackSerializer
 
+# Конфигурация Swagger документации
 schema_view = get_schema_view(
     openapi.Info(
         title="KAudio API",
@@ -49,14 +56,19 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
+    # Административная панель Django
     path('admin/', admin.site.urls),
     
+    # Основные API маршруты приложения kaudio
     path('api/', include('kaudio.urls')),
     
+    # API для загрузки файлов
     path('api/upload/profile-image/', ProfileImageUploadView.as_view(), name='upload-profile-image'),
     path('api/upload/artist-image/', ArtistImageUploadView.as_view(), name='upload-artist-image'),
     path('api/upload/album-image/', AlbumImageUploadView.as_view(), name='upload-album-image'),
     path('api/upload/track/', TrackUploadView.as_view(), name='upload-track'),    
+    
+    # Swagger документация API
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', 
             schema_view.without_ui(cache_timeout=0), 
             name='schema-json'),
@@ -67,10 +79,13 @@ urlpatterns = [
          schema_view.with_ui('redoc', cache_timeout=0), 
          name='schema-redoc'),
     
+    # Обслуживание медиа файлов
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 ]
 
+# Добавление статических файлов в режиме разработки
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
+# Добавление медиа файлов
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

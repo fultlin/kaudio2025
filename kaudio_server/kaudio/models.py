@@ -9,31 +9,90 @@ from django.core.files.storage import default_storage
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.db.models import Avg
+from typing import Optional, Any, Dict, List, Union
+from django.core.files import File
+from django.core.files.temp import NamedTemporaryFile
+from urllib.request import urlopen
 
 from .managers import UserActivityManager, TrackManager
 
-def get_artist_image_path(instance, filename):
-    """Путь для сохранения изображений артиста"""
+
+def get_artist_image_path(instance: 'Artist', filename: str) -> str:
+    """
+    Генерирует путь для сохранения изображений артиста.
+    
+    Args:
+        instance: Экземпляр модели Artist
+        filename: Имя файла изображения
+        
+    Returns:
+        str: Путь для сохранения файла
+    """
     return f'artist_images/{instance.id}/{filename}'
 
-def get_album_image_path(instance, filename):
-    """Путь для сохранения обложек альбомов"""
+
+def get_album_image_path(instance: 'Album', filename: str) -> str:
+    """
+    Генерирует путь для сохранения обложек альбомов.
+    
+    Args:
+        instance: Экземпляр модели Album
+        filename: Имя файла изображения
+        
+    Returns:
+        str: Путь для сохранения файла
+    """
     return f'album_images/{instance.id}/{filename}'
 
-def get_track_image_path(instance, filename):
-    """Путь для сохранения обложек треков"""
+
+def get_track_image_path(instance: 'Track', filename: str) -> str:
+    """
+    Генерирует путь для сохранения обложек треков.
+    
+    Args:
+        instance: Экземпляр модели Track
+        filename: Имя файла изображения
+        
+    Returns:
+        str: Путь для сохранения файла
+    """
     return f'track_images/{instance.id}/{filename}'
 
-def get_profile_image_path(instance, filename):
-    """Путь для сохранения изображений профиля"""
+
+def get_profile_image_path(instance: 'User', filename: str) -> str:
+    """
+    Генерирует путь для сохранения изображений профиля.
+    
+    Args:
+        instance: Экземпляр модели User
+        filename: Имя файла изображения
+        
+    Returns:
+        str: Путь для сохранения файла
+    """
     return f'profile_images/{instance.id}/{filename}'
 
-def get_playlist_image_path(instance, filename):
-    """Путь для сохранения обложек плейлистов"""
+
+def get_playlist_image_path(instance: 'Playlist', filename: str) -> str:
+    """
+    Генерирует путь для сохранения обложек плейлистов.
+    
+    Args:
+        instance: Экземпляр модели Playlist
+        filename: Имя файла изображения
+        
+    Returns:
+        str: Путь для сохранения файла
+    """
     return f'playlist_images/{instance.id}/{filename}'
 
+
 class User(AbstractUser):
-    """Модель пользователя"""
+    """
+    Расширенная модель пользователя с дополнительными полями.
+    
+    Добавляет поддержку ролей, изображения профиля и дополнительных функций.
+    """
     
     ROLE_CHOICES = (
         ('admin', _('Администратор')),
@@ -56,18 +115,30 @@ class User(AbstractUser):
     )
     
     @property
-    def img_profile_url(self):
+    def img_profile_url(self) -> Optional[str]:
+        """
+        Возвращает URL изображения профиля пользователя.
+        
+        Returns:
+            Optional[str]: URL изображения или None, если изображение не установлено
+        """
         if self.profile_image:
             return self.profile_image.url
         return None
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Переопределенный метод сохранения с обработкой URL изображения.
+        
+        Если установлен img_profile_url, но нет profile_image, 
+        пытается загрузить изображение по URL.
+        
+        Args:
+            *args: Позиционные аргументы
+            **kwargs: Именованные аргументы
+        """
         if self.img_profile_url and not self.profile_image:
             try:
-                from urllib.request import urlopen
-                from django.core.files import File
-                from django.core.files.temp import NamedTemporaryFile
-
                 img_temp = NamedTemporaryFile(delete=True)
                 img_temp.write(urlopen(self.img_profile_url).read())
                 img_temp.flush()
@@ -85,12 +156,23 @@ class User(AbstractUser):
         verbose_name_plural = _('Пользователи')
         ordering = ['username']
     
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Строковое представление пользователя.
+        
+        Returns:
+            str: Имя пользователя
+        """
         return self.username
 
 
 class Artist(models.Model):
-    """Модель исполнителя"""
+    """
+    Модель исполнителя.
+    
+    Представляет музыкального исполнителя с биографией, изображением
+    и статистикой слушателей.
+    """
     
     user = models.OneToOneField(
         User,
@@ -136,17 +218,36 @@ class Artist(models.Model):
         verbose_name_plural = _('Исполнители')
         ordering = ['id']
     
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Строковое представление исполнителя.
+        
+        Returns:
+            str: Идентификатор исполнителя
+        """
         return f'Исполнитель #{self.id}'
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Переопределенный метод сохранения.
+        
+        Автоматически устанавливает username из связанного пользователя.
+        
+        Args:
+            *args: Позиционные аргументы
+            **kwargs: Именованные аргументы
+        """
         if self.user:
             self.username = self.user.username
         super().save(*args, **kwargs)
 
 
 class Genre(models.Model):
-    """Модель жанра музыки"""
+    """
+    Модель жанра музыки.
+    
+    Представляет музыкальный жанр с названием и изображением.
+    """
     
     title = models.CharField(
         max_length=100,
@@ -163,12 +264,23 @@ class Genre(models.Model):
         verbose_name_plural = _('Жанры')
         ordering = ['title']
     
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Строковое представление жанра.
+        
+        Returns:
+            str: Название жанра
+        """
         return self.title
 
 
 class Album(models.Model):
-    """Модель альбома"""
+    """
+    Модель альбома.
+    
+    Представляет музыкальный альбом с информацией о треках,
+    продолжительности и статистике.
+    """
     
     title = models.CharField(
         max_length=200, 
@@ -217,12 +329,23 @@ class Album(models.Model):
         verbose_name_plural = _('Альбомы')
         ordering = ['-release_date']
     
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Строковое представление альбома.
+        
+        Returns:
+            str: Название альбома
+        """
         return self.title
 
 
 class Track(models.Model):
-    """Модель трека"""
+    """
+    Модель трека.
+    
+    Представляет отдельный музыкальный трек с аудиофайлом,
+    метаданными и статистикой воспроизведений.
+    """
     
     title = models.CharField(
         max_length=255,
@@ -309,34 +432,58 @@ class Track(models.Model):
         ordering = ['album', 'track_number']
         constraints = [
             models.UniqueConstraint(
-                fields=['title', 'album'],
-                name='unique_track_title_in_album',
-                condition=models.Q(album__isnull=False)
+                fields=['album', 'track_number'],
+                name='unique_track_number_in_album'
+            ),
+            models.UniqueConstraint(
+                fields=['album', 'title'],
+                name='unique_track_title_in_album'
             )
         ]
     
-    def __str__(self):
-        return f'{self.title} - {self.artist}'
-    
-    def clean(self):
-        """Проверяет уникальность названия трека в альбоме"""
+    def __str__(self) -> str:
+        """
+        Строковое представление трека.
+        
+        Returns:
+            str: Название трека
+        """
+        return self.title
+
+    def clean(self) -> None:
+        """
+        Валидация модели трека.
+        
+        Проверяет корректность данных трека перед сохранением.
+        
+        Raises:
+            ValidationError: Если данные некорректны
+        """
         from django.core.exceptions import ValidationError
         
-        if self.album:
-            # Проверяем, существует ли трек с таким же названием в альбоме
-            existing_track = Track.objects.filter(
-                album=self.album,
-                title__iexact=self.title
-            ).exclude(pk=self.pk).first()
-            
-            if existing_track:
-                raise ValidationError({
-                    'title': _('Трек с таким названием уже существует в этом альбоме')
-                })
+        if self.album and not self.track_number:
+            raise ValidationError({
+                'track_number': 'Номер трека обязателен для треков в альбоме'
+            })
+        
+        if self.track_number and self.track_number < 1:
+            raise ValidationError({
+                'track_number': 'Номер трека должен быть положительным числом'
+            })
+        
+        if self.duration and self.duration < 0:
+            raise ValidationError({
+                'duration': 'Продолжительность не может быть отрицательной'
+            })
 
 
 class Playlist(models.Model):
-    """Модель плейлиста"""
+    """
+    Модель плейлиста.
+    
+    Представляет пользовательский плейлист с треками,
+    настройками приватности и статистикой.
+    """
     
     title = models.CharField(
         max_length=200,
@@ -382,12 +529,23 @@ class Playlist(models.Model):
         verbose_name_plural = _('Плейлисты')
         ordering = ['-creation_date']
     
-    def __str__(self):
-        return f'{self.title} ({self.user.username})'
+    def __str__(self) -> str:
+        """
+        Строковое представление плейлиста.
+        
+        Returns:
+            str: Название плейлиста
+        """
+        return self.title
 
 
 class UserActivity(models.Model):
-    """Модель активности пользователя"""
+    """
+    Модель активности пользователя.
+    
+    Отслеживает различные действия пользователей: воспроизведения,
+    лайки, добавления в плейлисты и подписки на исполнителей.
+    """
     
     ACTIVITY_TYPES = (
         ('play', _('Воспроизведение')),
@@ -460,65 +618,116 @@ class UserActivity(models.Model):
         indexes = [
             models.Index(fields=['user', 'activity_type']),
             models.Index(fields=['timestamp']),
+            models.Index(fields=['track']),
+            models.Index(fields=['album']),
         ]
     
-    def __str__(self):
-        return f"{self.user.username} - {self.get_activity_type_display()} - {self.timestamp}"
-    
-    def clean(self):
-        """Проверяет, что для каждого типа активности указаны соответствующие поля"""
+    def __str__(self) -> str:
+        """
+        Строковое представление активности.
+        
+        Returns:
+            str: Описание активности
+        """
+        return f'{self.user.username} - {self.get_activity_type_display()}'
+
+    def clean(self) -> None:
+        """
+        Валидация модели активности.
+        
+        Проверяет корректность данных активности перед сохранением.
+        
+        Raises:
+            ValidationError: Если данные некорректны
+        """
         from django.core.exceptions import ValidationError
         
-        if self.activity_type == 'play':
-            if not any([self.track, self.album]):
-                raise ValidationError(_("Для активности 'play' необходимо указать трек или альбом"))
-        elif self.activity_type == 'like':
-            if not any([self.track, self.album, self.artist]):
-                raise ValidationError(_("Для активности 'like' необходимо указать трек, альбом или исполнителя"))
-        elif self.activity_type == 'follow_artist':
-            if not self.artist:
-                raise ValidationError(_("Для активности 'follow_artist' необходимо указать исполнителя"))
-        elif self.activity_type in ['add_to_playlist', 'remove_from_playlist']:
-            if not all([self.track, self.playlist]):
-                raise ValidationError(_("Для активности 'add_to_playlist' или 'remove_from_playlist' необходимо указать трек и плейлист"))
-    
-    def save(self, *args, **kwargs):
-        """Сохраняет активность и обновляет связанные счетчики"""
-        self.full_clean()
+        # Проверяем, что указан хотя бы один связанный объект
+        related_objects = [self.track, self.album, self.playlist, self.artist]
+        if not any(related_objects):
+            raise ValidationError(
+                'Должен быть указан хотя бы один связанный объект (трек, альбом, плейлист или исполнитель)'
+            )
         
-        if self.activity_type == 'play':
-            if self.track:
-                self.track.play_count += 1
-                self.track.save()
-            if self.album:
-                self.album.play_count = self.album.play_count + 1 if hasattr(self.album, 'play_count') else 1
-                self.album.save()
-        elif self.activity_type == 'like':
-            if self.track:
-                self.track.likes_count += 1
-                self.track.save()
-            elif self.album:
-                self.album.likes_count += 1
-                self.album.save()
+        # Проверяем соответствие типа активности и связанного объекта
+        if self.activity_type in ['play', 'like'] and not self.track:
+            raise ValidationError({
+                'track': 'Для данного типа активности должен быть указан трек'
+            })
+        
+        if self.activity_type == 'like_album' and not self.album:
+            raise ValidationError({
+                'album': 'Для лайка альбома должен быть указан альбом'
+            })
+        
+        if self.activity_type in ['add_to_playlist', 'remove_from_playlist'] and not self.playlist:
+            raise ValidationError({
+                'playlist': 'Для операций с плейлистом должен быть указан плейлист'
+            })
+        
+        if self.activity_type == 'follow_artist' and not self.artist:
+            raise ValidationError({
+                'artist': 'Для подписки на исполнителя должен быть указан исполнитель'
+            })
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Переопределенный метод сохранения.
+        
+        Обновляет статистику связанных объектов при сохранении активности.
+        
+        Args:
+            *args: Позиционные аргументы
+            **kwargs: Именованные аргументы
+        """
+        if self.activity_type == 'play' and self.track:
+            self.track.play_count += 1
+            self.track.save(update_fields=['play_count'])
+        
+        elif self.activity_type == 'like' and self.track:
+            self.track.likes_count += 1
+            self.track.save(update_fields=['likes_count'])
+        
+        elif self.activity_type == 'like_album' and self.album:
+            self.album.likes_count += 1
+            self.album.save(update_fields=['likes_count'])
         
         super().save(*args, **kwargs)
-    
-    def delete(self, *args, **kwargs):
-        """Удаляет активность и обновляет связанные счетчики"""
-        # Обновляем счетчики в зависимости от типа активности
-        if self.activity_type == 'like':
-            if self.track:
-                self.track.likes_count = max(0, self.track.likes_count - 1)
-                self.track.save()
-            elif self.album:
-                self.album.likes_count = max(0, self.album.likes_count - 1)
-                self.album.save()
+
+    def delete(self, *args: Any, **kwargs: Any) -> tuple[int, Dict[str, int]]:
+        """
+        Переопределенный метод удаления.
         
-        super().delete(*args, **kwargs)
+        Обновляет статистику связанных объектов при удалении активности.
+        
+        Args:
+            *args: Позиционные аргументы
+            **kwargs: Именованные аргументы
+            
+        Returns:
+            tuple[int, Dict[str, int]]: Результат удаления
+        """
+        if self.activity_type == 'play' and self.track:
+            self.track.play_count = max(0, self.track.play_count - 1)
+            self.track.save(update_fields=['play_count'])
+        
+        elif self.activity_type == 'like' and self.track:
+            self.track.likes_count = max(0, self.track.likes_count - 1)
+            self.track.save(update_fields=['likes_count'])
+        
+        elif self.activity_type == 'like_album' and self.album:
+            self.album.likes_count = max(0, self.album.likes_count - 1)
+            self.album.save(update_fields=['likes_count'])
+        
+        return super().delete(*args, **kwargs)
 
 
 class Subscribe(models.Model):
-    """Модель подписки"""
+    """
+    Модель подписки.
+    
+    Определяет типы подписок с их правами и ограничениями.
+    """
     
     SUBSCRIPTION_TYPES = (
         ('free', _('Бесплатная')),
@@ -532,19 +741,36 @@ class Subscribe(models.Model):
         verbose_name=_('Тип подписки')
     )
     permissions = models.TextField(
-        verbose_name=_('Разрешения')
+        verbose_name=_('Права и ограничения'),
+        blank=True
+    )
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name=_('Цена')
     )
     
     class Meta:
         verbose_name = _('Подписка')
         verbose_name_plural = _('Подписки')
     
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Строковое представление подписки.
+        
+        Returns:
+            str: Тип подписки
+        """
         return self.get_type_display()
 
 
 class UserSubscribe(models.Model):
-    """Модель подписки пользователя"""
+    """
+    Модель подписки пользователя.
+    
+    Связывает пользователей с их подписками и отслеживает период действия.
+    """
     
     user = models.ForeignKey(
         User,
@@ -563,9 +789,13 @@ class UserSubscribe(models.Model):
         verbose_name=_('Дата начала')
     )
     end_date = models.DateField(
+        verbose_name=_('Дата окончания'),
         null=True,
-        blank=True,
-        verbose_name=_('Дата окончания')
+        blank=True
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_('Активна')
     )
     
     class Meta:
@@ -573,12 +803,22 @@ class UserSubscribe(models.Model):
         verbose_name_plural = _('Подписки пользователей')
         unique_together = ['user', 'subscribe']
     
-    def __str__(self):
-        return f'{self.user.username} - {self.subscribe}'
+    def __str__(self) -> str:
+        """
+        Строковое представление подписки пользователя.
+        
+        Returns:
+            str: Описание подписки пользователя
+        """
+        return f'{self.user.username} - {self.subscribe.get_type_display()}'
 
 
 class UserAlbum(models.Model):
-    """Модель альбома пользователя"""
+    """
+    Модель альбома пользователя.
+    
+    Связывает пользователей с альбомами в их библиотеке.
+    """
     
     user = models.ForeignKey(
         User,
@@ -597,7 +837,7 @@ class UserAlbum(models.Model):
     )
     added_at = models.DateTimeField(
         auto_now_add=True,
-        verbose_name=_('Добавлен')
+        verbose_name=_('Дата добавления')
     )
     
     class Meta:
@@ -606,12 +846,22 @@ class UserAlbum(models.Model):
         unique_together = ['user', 'album']
         ordering = ['position']
     
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Строковое представление альбома пользователя.
+        
+        Returns:
+            str: Описание альбома пользователя
+        """
         return f'{self.user.username} - {self.album.title}'
 
 
 class UserTrack(models.Model):
-    """Модель трека пользователя"""
+    """
+    Модель трека пользователя.
+    
+    Связывает пользователей с треками в их библиотеке.
+    """
     
     user = models.ForeignKey(
         User,
@@ -630,7 +880,7 @@ class UserTrack(models.Model):
     )
     added_at = models.DateTimeField(
         auto_now_add=True,
-        verbose_name=_('Добавлен')
+        verbose_name=_('Дата добавления')
     )
     
     class Meta:
@@ -639,12 +889,22 @@ class UserTrack(models.Model):
         unique_together = ['user', 'track']
         ordering = ['position']
     
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Строковое представление трека пользователя.
+        
+        Returns:
+            str: Описание трека пользователя
+        """
         return f'{self.user.username} - {self.track.title}'
 
 
 class PlaylistTrack(models.Model):
-    """Модель связи плейлист-трек"""
+    """
+    Модель связи плейлист-трек.
+    
+    Связывает треки с плейлистами и определяет их порядок.
+    """
     
     playlist = models.ForeignKey(
         Playlist,
@@ -661,7 +921,7 @@ class PlaylistTrack(models.Model):
     )
     added_at = models.DateTimeField(
         auto_now_add=True,
-        verbose_name=_('Добавлен')
+        verbose_name=_('Дата добавления')
     )
     
     class Meta:
@@ -670,12 +930,22 @@ class PlaylistTrack(models.Model):
         unique_together = ['playlist', 'track']
         ordering = ['position']
     
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Строковое представление трека в плейлисте.
+        
+        Returns:
+            str: Описание трека в плейлисте
+        """
         return f'{self.playlist.title} - {self.track.title}'
 
 
 class AlbumGenre(models.Model):
-    """Модель связи альбом-жанр"""
+    """
+    Модель связи альбом-жанр.
+    
+    Связывает альбомы с жанрами.
+    """
     
     album = models.ForeignKey(
         Album,
@@ -693,12 +963,22 @@ class AlbumGenre(models.Model):
         verbose_name_plural = _('Жанры альбомов')
         unique_together = ['album', 'genre']
     
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Строковое представление жанра альбома.
+        
+        Returns:
+            str: Описание жанра альбома
+        """
         return f'{self.album.title} - {self.genre.title}'
 
 
 class TrackGenre(models.Model):
-    """Модель связи трек-жанр"""
+    """
+    Модель связи трек-жанр.
+    
+    Связывает треки с жанрами.
+    """
     
     track = models.ForeignKey(
         Track,
@@ -716,66 +996,123 @@ class TrackGenre(models.Model):
         verbose_name_plural = _('Жанры треков')
         unique_together = ['track', 'genre']
     
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Строковое представление жанра трека.
+        
+        Returns:
+            str: Описание жанра трека
+        """
         return f'{self.track.title} - {self.genre.title}'
 
 
 class Statistics(models.Model):
-    """Модель для статистики"""
+    """
+    Модель статистики.
+    
+    Предоставляет статистическую информацию о системе.
+    """
     
     class Meta:
         verbose_name = _('Статистика')
         verbose_name_plural = _('Статистика')
         managed = False
+    
+    def get_absolute_url(self) -> str:
+        """
+        Возвращает абсолютный URL для статистики.
         
-    def get_absolute_url(self):
-        """Возвращает URL для просмотра статистики"""
-        return reverse('track-genre-statistics')
+        Returns:
+            str: URL статистики
+        """
+        return reverse('statistics')
     
     @property
-    def genre_statistics_url(self):
-        """URL для статистики по жанрам"""
-        return reverse('track-genre-statistics')
+    def genre_statistics_url(self) -> str:
+        """
+        URL для статистики по жанрам.
+        
+        Returns:
+            str: URL статистики жанров
+        """
+        return reverse('genre_statistics')
     
     @property
-    def popular_tracks_url(self):
-        """URL для популярных треков"""
-        return reverse('track-popular-tracks')
+    def popular_tracks_url(self) -> str:
+        """
+        URL для популярных треков.
+        
+        Returns:
+            str: URL популярных треков
+        """
+        return reverse('popular_tracks')
     
     @property
-    def top_artists_url(self):
-        """URL для топ исполнителей"""
-        return reverse('track-top-artists')
+    def top_artists_url(self) -> str:
+        """
+        URL для топ исполнителей.
+        
+        Returns:
+            str: URL топ исполнителей
+        """
+        return reverse('top_artists')
 
 
 class Review(models.Model):
+    """
+    Абстрактная модель отзыва.
+    
+    Базовый класс для отзывов на треки и альбомы.
+    """
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews')
     rating = models.IntegerField(choices=[(i, i) for i in range(1, 6)])
     text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+    
     class Meta:
         abstract = True
 
+
 class TrackReview(Review):
+    """
+    Модель отзыва на трек.
+    
+    Позволяет пользователям оставлять отзывы на отдельные треки.
+    """
     track = models.ForeignKey('Track', on_delete=models.CASCADE, related_name='reviews')
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='track_reviews')
-
+    
     class Meta:
         unique_together = ('author', 'track')
 
+
 class AlbumReview(Review):
+    """
+    Модель отзыва на альбом.
+    
+    Позволяет пользователям оставлять отзывы на альбомы.
+    """
     album = models.ForeignKey('Album', on_delete=models.CASCADE, related_name='reviews')
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='album_reviews')
-
+    
     class Meta:
         unique_together = ('author', 'album')
 
+
 @receiver([post_save, post_delete], sender=TrackReview)
-def update_track_rating(sender, instance, **kwargs):
-    """Обновляет средний рейтинг трека при изменении отзывов"""
+def update_track_rating(sender: Any, instance: TrackReview, **kwargs: Any) -> None:
+    """
+    Сигнал для обновления среднего рейтинга трека.
+    
+    Вызывается при сохранении или удалении отзыва на трек.
+    
+    Args:
+        sender: Отправитель сигнала
+        instance: Экземпляр отзыва
+        **kwargs: Дополнительные аргументы
+    """
     track = instance.track
-    avg_rating = TrackReview.objects.filter(track=track).aggregate(
-        avg=Avg('rating'))['avg']
-    Track.objects.filter(id=track.id).update(avg_rating=avg_rating)
+    avg_rating = track.reviews.aggregate(avg=Avg('rating'))['avg']
+    track.avg_rating = avg_rating
+    track.save(update_fields=['avg_rating'])

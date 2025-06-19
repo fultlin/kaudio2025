@@ -88,7 +88,7 @@ const Search = observer(({ variant = "header" }) => {
     [navigate]
   );
 
-  const handleSearch = (e) => {
+  const handleSearch = async (e) => {
     e.preventDefault();
     const query = e.target.value;
     searchStore.setSearchQuery(query);
@@ -97,7 +97,20 @@ const Search = observer(({ variant = "header" }) => {
       clearTimeout(timeoutId);
     }
 
-    const newTimeoutId = setTimeout(() => {
+    const newTimeoutId = setTimeout(async () => {
+      // Сначала ищем артистов
+      try {
+        const artistRes = await instance.get(
+          `/artists/?search=${encodeURIComponent(query)}`
+        );
+        if (Array.isArray(artistRes.data) && artistRes.data.length === 1) {
+          navigate(`/artist/${artistRes.data[0].id}`);
+          return;
+        }
+      } catch (err) {
+        // Ошибку поиска артистов игнорируем, продолжаем обычный поиск
+      }
+      // Если артистов нет или их несколько — обычный поиск
       debouncedSearch(query, searchStore.searchType, filters);
     }, 500);
 

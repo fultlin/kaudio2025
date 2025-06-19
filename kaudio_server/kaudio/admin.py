@@ -1,16 +1,35 @@
+"""
+Административная панель Django для приложения kaudio.
+
+Предоставляет интерфейс для управления всеми моделями приложения:
+- Пользователи и исполнители
+- Альбомы, треки и жанры
+- Плейлисты и активности пользователей
+- Подписки и связи между моделями
+
+Включает кастомные действия для экспорта в PDF и управления данными.
+"""
+
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
+from django.http import HttpResponse, HttpRequest
+from django.utils import timezone
+from django.db.models import QuerySet
+from typing import Optional, Any, List
 from .models import (
     User, Artist, Genre, Album, Track, Playlist, UserActivity,
     Subscribe, UserSubscribe, UserAlbum, UserTrack, PlaylistTrack,
     AlbumGenre, TrackGenre
 )
-from django.http import HttpResponse
-from django.utils import timezone
 from .utils.pdf_generator import generate_track_pdf, generate_album_pdf
 
 
 class AlbumGenreInline(admin.TabularInline):
+    """
+    Встроенная форма для связи альбомов с жанрами.
+    
+    Позволяет управлять жанрами альбома прямо в форме альбома.
+    """
     model = AlbumGenre
     extra = 1
     verbose_name = _('Жанр')
@@ -19,6 +38,11 @@ class AlbumGenreInline(admin.TabularInline):
 
 
 class TrackGenreInline(admin.TabularInline):
+    """
+    Встроенная форма для связи треков с жанрами.
+    
+    Позволяет управлять жанрами трека прямо в форме трека.
+    """
     model = TrackGenre
     extra = 1
     verbose_name = _('Жанр')
@@ -27,6 +51,11 @@ class TrackGenreInline(admin.TabularInline):
 
 
 class PlaylistTrackInline(admin.TabularInline):
+    """
+    Встроенная форма для связи плейлистов с треками.
+    
+    Позволяет управлять треками в плейлисте прямо в форме плейлиста.
+    """
     model = PlaylistTrack
     extra = 1
     verbose_name = _('Трек')
@@ -35,6 +64,11 @@ class PlaylistTrackInline(admin.TabularInline):
 
 
 class TrackInline(admin.TabularInline):
+    """
+    Встроенная форма для треков в альбоме.
+    
+    Позволяет управлять треками альбома прямо в форме альбома.
+    """
     model = Track
     extra = 1
     verbose_name = _('Трек')
@@ -44,6 +78,11 @@ class TrackInline(admin.TabularInline):
 
 
 class UserAlbumInline(admin.TabularInline):
+    """
+    Встроенная форма для альбомов пользователя.
+    
+    Позволяет управлять альбомами пользователя прямо в форме пользователя.
+    """
     model = UserAlbum
     extra = 1
     verbose_name = _('Альбом пользователя')
@@ -52,6 +91,11 @@ class UserAlbumInline(admin.TabularInline):
 
 
 class UserTrackInline(admin.TabularInline):
+    """
+    Встроенная форма для треков пользователя.
+    
+    Позволяет управлять треками пользователя прямо в форме пользователя.
+    """
     model = UserTrack
     extra = 1
     verbose_name = _('Трек пользователя')
@@ -60,6 +104,11 @@ class UserTrackInline(admin.TabularInline):
 
 
 class UserSubscribeInline(admin.TabularInline):
+    """
+    Встроенная форма для подписок пользователя.
+    
+    Позволяет управлять подписками пользователя прямо в форме пользователя.
+    """
     model = UserSubscribe
     extra = 1
     verbose_name = _('Подписка пользователя')
@@ -68,6 +117,12 @@ class UserSubscribeInline(admin.TabularInline):
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
+    """
+    Административная панель для модели User.
+    
+    Предоставляет интерфейс для управления пользователями с группировкой полей
+    и встроенными формами для связанных данных.
+    """
     list_display = ['id', 'username', 'email', 'role', 'get_last_login', 'is_active']
     list_filter = ['role', 'is_active', 'date_joined']
     search_fields = ['username', 'email']
@@ -90,7 +145,16 @@ class UserAdmin(admin.ModelAdmin):
     inlines = [UserSubscribeInline, UserAlbumInline, UserTrackInline]
     
     @admin.display(description=_('Последний вход'), ordering='last_login')
-    def get_last_login(self, obj):
+    def get_last_login(self, obj: User) -> str:
+        """
+        Получает отформатированную дату последнего входа пользователя.
+        
+        Args:
+            obj: Объект пользователя
+            
+        Returns:
+            str: Отформатированная дата или сообщение об отсутствии данных
+        """
         if obj.last_login:
             return obj.last_login.strftime('%d.%m.%Y %H:%M')
         return _('Нет данных')
@@ -98,6 +162,12 @@ class UserAdmin(admin.ModelAdmin):
 
 @admin.register(Artist)
 class ArtistAdmin(admin.ModelAdmin):
+    """
+    Административная панель для модели Artist.
+    
+    Предоставляет интерфейс для управления исполнителями с группировкой полей
+    и встроенными формами для треков.
+    """
     list_display = ['id', 'get_email', 'user', 'username', 'is_verified', 'monthly_listeners']
     list_filter = ['is_verified']
     search_fields = ['email', 'id', 'user__username', 'username']
@@ -113,26 +183,64 @@ class ArtistAdmin(admin.ModelAdmin):
     inlines = [TrackInline]
     
     @admin.display(description=_('Email'), ordering='email')
-    def get_email(self, obj):
+    def get_email(self, obj: Artist) -> str:
+        """
+        Получает email исполнителя или сообщение об отсутствии.
+        
+        Args:
+            obj: Объект исполнителя
+            
+        Returns:
+            str: Email или сообщение об отсутствии
+        """
         return obj.email or _('Не указан')
 
 
 @admin.register(Genre)
 class GenreAdmin(admin.ModelAdmin):
+    """
+    Административная панель для модели Genre.
+    
+    Предоставляет интерфейс для управления жанрами с отображением статистики.
+    """
     list_display = ['title', 'get_tracks_count', 'get_albums_count']
     search_fields = ['title']
     
     @admin.display(description=_('Количество треков'))
-    def get_tracks_count(self, obj):
+    def get_tracks_count(self, obj: Genre) -> int:
+        """
+        Получает количество треков в жанре.
+        
+        Args:
+            obj: Объект жанра
+            
+        Returns:
+            int: Количество треков
+        """
         return obj.tracks.count()
     
     @admin.display(description=_('Количество альбомов'))
-    def get_albums_count(self, obj):
+    def get_albums_count(self, obj: Genre) -> int:
+        """
+        Получает количество альбомов в жанре.
+        
+        Args:
+            obj: Объект жанра
+            
+        Returns:
+            int: Количество альбомов
+        """
         return obj.albums.count()
 
 
 @admin.register(Album)
 class AlbumAdmin(admin.ModelAdmin):
+    """
+    Административная панель для модели Album.
+    
+    Предоставляет интерфейс для управления альбомами с кастомными действиями
+    для экспорта в PDF и управления данными.
+    """
     list_display = ['title', 'get_artist', 'release_date', 'total_tracks', 'total_duration_minutes']
     list_filter = ['release_date']
     search_fields = ['title', 'artist__email']
@@ -151,17 +259,41 @@ class AlbumAdmin(admin.ModelAdmin):
     actions = ['export_as_pdf', 'recalculate_duration', 'mark_as_released']
     
     @admin.display(description=_('Исполнитель'), ordering='artist__email')
-    def get_artist(self, obj):
+    def get_artist(self, obj: Album) -> str:
+        """
+        Получает отображаемое имя исполнителя альбома.
+        
+        Args:
+            obj: Объект альбома
+            
+        Returns:
+            str: Email исполнителя или ID
+        """
         return obj.artist.email if obj.artist.email else f'Исполнитель #{obj.artist.id}'
     
     @admin.display(description=_('Продолжительность (мин)'), ordering='total_duration')
-    def total_duration_minutes(self, obj):
+    def total_duration_minutes(self, obj: Album) -> str:
+        """
+        Получает продолжительность альбома в формате MM:SS.
+        
+        Args:
+            obj: Объект альбома
+            
+        Returns:
+            str: Продолжительность в формате MM:SS
+        """
         minutes = obj.total_duration // 60
         seconds = obj.total_duration % 60
         return f'{minutes}:{seconds:02d}'
 
-    def recalculate_duration(self, request, queryset):
-        """Пересчитывает общую длительность альбомов"""
+    def recalculate_duration(self, request: HttpRequest, queryset: QuerySet[Album]) -> None:
+        """
+        Пересчитывает общую длительность выбранных альбомов.
+        
+        Args:
+            request: HTTP запрос
+            queryset: Выбранные альбомы
+        """
         for album in queryset:
             total_duration = sum(track.duration for track in album.tracks.all())
             total_tracks = album.tracks.count()
@@ -174,16 +306,31 @@ class AlbumAdmin(admin.ModelAdmin):
         ))
     recalculate_duration.short_description = _("Пересчитать длительность")
 
-    def mark_as_released(self, request, queryset):
-        """Отмечает альбомы как выпущенные сегодня"""
+    def mark_as_released(self, request: HttpRequest, queryset: QuerySet[Album]) -> None:
+        """
+        Отмечает выбранные альбомы как выпущенные сегодня.
+        
+        Args:
+            request: HTTP запрос
+            queryset: Выбранные альбомы
+        """
         updated = queryset.update(release_date=timezone.now().date())
         self.message_user(request, _(
             f'{updated} альбомов отмечены как выпущенные сегодня'
         ))
     mark_as_released.short_description = _("Отметить как выпущенные сегодня")
 
-    def export_as_pdf(self, request, queryset):
-        """Экспортирует выбранные альбомы в PDF"""
+    def export_as_pdf(self, request: HttpRequest, queryset: QuerySet[Album]) -> HttpResponse:
+        """
+        Экспортирует выбранные альбомы в PDF.
+        
+        Args:
+            request: HTTP запрос
+            queryset: Выбранные альбомы
+            
+        Returns:
+            HttpResponse: PDF файл с отчетом
+        """
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="albums_report_{timezone.now().strftime("%Y%m%d_%H%M%S")}.pdf"'
         

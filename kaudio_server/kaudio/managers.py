@@ -1,11 +1,26 @@
 from django.db import models
 from django.utils import timezone
-from django.db.models import Count, Sum, F, FloatField, ExpressionWrapper, Q, Avg
+from django.db.models import Count, Sum, F, FloatField, ExpressionWrapper, Q, Avg, QuerySet
+from typing import Optional, List, Dict, Any, Union
+
 
 class UserActivityManager(models.Manager):
-    def get_user_activities(self, user, activity_type=None):
+    """
+    Менеджер для модели UserActivity.
+    
+    Предоставляет методы для работы с активностями пользователей.
+    """
+    
+    def get_user_activities(self, user: 'User', activity_type: Optional[str] = None) -> QuerySet['UserActivity']:
         """
-        Базовый метод для получения активностей пользователя
+        Получает активности пользователя с фильтрацией по типу.
+        
+        Args:
+            user: Пользователь, чьи активности нужно получить
+            activity_type: Тип активности для фильтрации (опционально)
+            
+        Returns:
+            QuerySet[UserActivity]: Queryset активностей пользователя
         """
         try:
             queryset = self.filter(user=user)
@@ -25,9 +40,15 @@ class UserActivityManager(models.Manager):
             print(f"Ошибка в get_user_activities: {str(e)}")
             return self.none()
 
-    def get_liked_tracks(self, user):
+    def get_liked_tracks(self, user: 'User') -> QuerySet['UserActivity']:
         """
-        Получить лайкнутые треки пользователя
+        Получает лайкнутые треки пользователя.
+        
+        Args:
+            user: Пользователь, чьи лайки нужно получить
+            
+        Returns:
+            QuerySet[UserActivity]: Queryset лайков пользователя на треки
         """
         try:
             return self.get_user_activities(
@@ -40,8 +61,21 @@ class UserActivityManager(models.Manager):
 
 
 class TrackManager(models.Manager):
-    def get_tracks_with_related(self):
-        """Получить треки со всеми связанными данными"""
+    """
+    Менеджер для модели Track.
+    
+    Предоставляет методы для работы с треками и получения статистики.
+    """
+    
+    def get_tracks_with_related(self) -> QuerySet['Track']:
+        """
+        Получает треки со всеми связанными данными.
+        
+        Использует select_related и prefetch_related для оптимизации запросов.
+        
+        Returns:
+            QuerySet[Track]: Queryset треков с предзагруженными связанными данными
+        """
         return self.select_related(
             'artist',
             'album'
@@ -50,13 +84,18 @@ class TrackManager(models.Manager):
             'user_activities'
         )
     
-    def get_genre_statistics(self):
+    def get_genre_statistics(self) -> QuerySet[Dict[str, Any]]:
         """
-        Получает статистику по трекам для каждого жанра:
+        Получает статистику по трекам для каждого жанра.
+        
+        Включает:
         - Количество треков
-        - Общая длительность
+        - Общую длительность
         - Среднее количество прослушиваний
         - Среднее количество лайков
+        
+        Returns:
+            QuerySet[Dict[str, Any]]: Статистика по жанрам
         """
         return self.values('genres__title').annotate(
             tracks_count=Count('id'),
@@ -65,8 +104,13 @@ class TrackManager(models.Manager):
             avg_likes=Avg('likes_count')
         ).order_by('-tracks_count')
 
-    def get_tracks_with_popularity(self):
-        """Аннотирует треки показателем популярности"""
+    def get_tracks_with_popularity(self) -> QuerySet[Dict[str, Any]]:
+        """
+        Аннотирует треки показателем популярности.
+        
+        Returns:
+            QuerySet[Dict[str, Any]]: Треки с показателями популярности
+        """
         return self.prefetch_related(
             'genres'
         ).values('genres__title').annotate(
@@ -76,13 +120,20 @@ class TrackManager(models.Manager):
             avg_likes=Avg('likes_count')
         ).order_by('-tracks_count')
 
-    def get_top_artists_by_duration(self, limit=10):
+    def get_top_artists_by_duration(self, limit: int = 10) -> QuerySet[Dict[str, Any]]:
         """
-        Получает топ исполнителей по общей длительности треков
-        с дополнительной статистикой:
+        Получает топ исполнителей по общей длительности треков.
+        
+        Включает дополнительную статистику:
         - Общее количество треков
         - Средняя длительность трека
         - Общее количество прослушиваний
+        
+        Args:
+            limit: Максимальное количество исполнителей для возврата
+            
+        Returns:
+            QuerySet[Dict[str, Any]]: Топ исполнителей с статистикой
         """
         return self.values('artist__email').annotate(
             total_tracks=Count('id'),
