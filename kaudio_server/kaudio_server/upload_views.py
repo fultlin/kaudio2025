@@ -173,12 +173,10 @@ class ArtistImageUploadView(APIView):
                     'error': 'У вас нет прав для редактирования этого исполнителя'
                 }, status=status.HTTP_403_FORBIDDEN)
             
-            # Сохраняем изображение через ImageField
             artist.cover_image = image
             artist.save()
             
-            # Получаем URL через свойство
-            cover_image_url: str = artist.img_cover_url
+            cover_image_url: str = request.build_absolute_uri(artist.cover_image.url)
             
             return Response({
                 'img_cover_url': cover_image_url,

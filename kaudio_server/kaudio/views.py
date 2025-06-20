@@ -1523,11 +1523,11 @@ def get_user_activity(request):
 
 def get_optimized_tracks_queryset(request, filters=None):
     qs = Track.objects.select_related(
-        'artist',
-        'album'
-    ).prefetch_related(
-        'genres',
-        Prefetch('trackgenre_set', queryset=TrackGenre.objects.select_related('genre'))
+                'artist',
+                'album'
+            ).prefetch_related(
+                'genres',
+                Prefetch('trackgenre_set', queryset=TrackGenre.objects.select_related('genre'))
     ).annotate(
         calculated_avg_rating=Avg('reviews__rating'),
         total_plays=Count('user_activities', filter=Q(user_activities__activity_type='play'))

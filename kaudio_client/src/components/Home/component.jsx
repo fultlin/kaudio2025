@@ -269,7 +269,6 @@ const Home = observer(() => {
 
   return (
     <div className={styles.mainContainer}>
-      <button onClick={() => {throw new Error("This is your first error!");}}>Break the world</button>
       <div className={styles.appContent}>
         <div className={styles.contentArea}>
           <main className={styles.content}>

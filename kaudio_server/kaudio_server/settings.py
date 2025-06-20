@@ -22,6 +22,7 @@ from pathlib import Path
 from datetime import timedelta
 import os
 import sentry_sdk
+import sys
 
 
 # Пути к директориям проекта
@@ -34,8 +35,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ВНИМАНИЕ: храните секретный ключ в тайне в продакшене!
 SECRET_KEY = 'django-insecure-5x^$=y3wp8#(%!*ram0&#&*nu=#wga-))%&knk$stz3=%71q83'
 
-# ВНИМАНИЕ: не запускайте с включенным DEBUG в продакшене!
-DEBUG = True
+DEBUG = False
+# Включать DEBUG только при запуске тестов
+if 'test' in sys.argv:
+    DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
@@ -251,6 +254,11 @@ LOGGING = {
         },
     },
 }
+
+# Отключить логи при запуске тестов
+if 'test' in sys.argv:
+    LOGGING['loggers']['']['handlers'] = []
+    LOGGING['loggers']['']['level'] = 'CRITICAL'
 
 # Sentry
 sentry_sdk.init(
