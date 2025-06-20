@@ -21,6 +21,8 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 import os
+import sentry_sdk
+
 
 # Пути к директориям проекта
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -249,3 +251,11 @@ LOGGING = {
         },
     },
 }
+
+# Sentry
+sentry_sdk.init(
+    dsn="https://7f1a3a062f809d43f239b7e1e2e3a0aa@o4509527088496640.ingest.de.sentry.io/4509527092822096",
+    # Add data like request headers and IP for users,
+    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+    send_default_pii=True,
+)

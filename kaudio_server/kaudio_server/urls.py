@@ -55,9 +55,15 @@ schema_view = get_schema_view(
     permission_classes=[permissions.AllowAny],
 )
 
+def trigger_error(request):
+    division_by_zero = 1 / 0
+
 urlpatterns = [
     # Административная панель Django
     path('admin/', admin.site.urls),
+    
+    # Sentry
+    path('sentry-debug/', trigger_error),
     
     # Основные API маршруты приложения kaudio
     path('api/', include('kaudio.urls')),
