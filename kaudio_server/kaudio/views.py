@@ -38,6 +38,9 @@ from .filters import TrackFilter, AlbumFilter, ArtistFilter, PlaylistFilter, Use
 import django_filters.rest_framework
 from typing import Dict, Any, Optional, List, Union, Callable, TypeVar, cast
 from django.core.files.uploadedfile import UploadedFile
+import requests
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 
 logger = logging.getLogger(__name__)
 
@@ -1605,4 +1608,31 @@ class OptimizedUserReviewsView(APIView):
             return Response({
                 'status': 'error',
                 'message': str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def social_login_view(request):
+    provider = request.data.get('provider')
+    id_token_str = request.data.get('access_token')
+    if provider != 'google' or not id_token_str:
+        return Response({'error': 'provider и access_token обязательны'}, status=400)
+
+    try:
+        idinfo = id_token.verify_oauth2_token(id_token_str, google_requests.Request())
+        email = idinfo.get('email')
+        if not email:
+            return Response({'error': 'Email не найден в id_token'}, status=400)
+    except Exception as e:
+        return Response({'error': f'Ошибка валидации id_token: {str(e)}'}, status=400)
+
+    user, created = User.objects.get_or_create(email=email, defaults={
+        'username': email.split('@')[0],
+        'role': 'user',
+    })
+    if created:
+        user.set_unusable_password()
+        user.save()
+    token, _ = Token.objects.get_or_create(user=user)
+    serializer = UserSerializer(user, context={'request': request})
+    return Response({'token': token.key, 'user': serializer.data}) 

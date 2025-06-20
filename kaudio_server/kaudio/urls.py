@@ -19,7 +19,7 @@ from .views import (
     TrackGenreViewSet, StatisticsViewSet, TrackReviewViewSet, AlbumReviewViewSet,
     OptimizedTrackListView, OptimizedPlaylistListView, OptimizedUserReviewsView,
     login_view, register_view, upload_track_view, recent_tracks, recent_albums,
-    get_tracks_analytics, get_user_activity
+    get_tracks_analytics, get_user_activity, social_login_view
 )
 
 # Роутер для ViewSet'ов
@@ -51,6 +51,7 @@ urlpatterns = [
     path('auth/token/', obtain_auth_token, name='api_token_auth'),
     path('auth/login/', login_view, name='login'),
     path('auth/register/', register_view, name='register'),
+    path('auth/social-login/', social_login_view, name='social_login'),
     
     # Загрузка и управление контентом
     path('upload-track/', upload_track_view, name='upload-track'),

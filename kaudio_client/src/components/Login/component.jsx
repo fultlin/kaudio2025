@@ -3,6 +3,7 @@ import { useNavigate, NavLink } from "react-router-dom";
 import { observer } from "mobx-react-lite";
 import authStore from "../../stores/authStore";
 import styles from "./Login.module.scss";
+import GoogleLoginButton from "./GoogleLoginButton";
 
 const LoginForm = observer(() => {
   const [formData, setFormData] = useState({
@@ -41,53 +42,58 @@ const LoginForm = observer(() => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className={styles.form}>
-      <h2 className={styles.login__form}>Авторизация</h2>
+    <>
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <h2 className={styles.login__form}>Авторизация</h2>
 
-      {error && <div className={styles.error}>{error}</div>}
+        {error && <div className={styles.error}>{error}</div>}
 
-      <label>
-        Имя пользователя:
+        <label>
+          Имя пользователя:
+          <br />
+          <input
+            type="text"
+            name="username"
+            value={formData.username}
+            onChange={handleChange}
+            className={styles.input}
+            required
+          />
+        </label>
         <br />
-        <input
-          type="text"
-          name="username"
-          value={formData.username}
-          onChange={handleChange}
-          className={styles.input}
-          required
-        />
-      </label>
-      <br />
 
-      <label>
-        Пароль:
+        <label>
+          Пароль:
+          <br />
+          <input
+            type="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            className={styles.input}
+            required
+          />
+        </label>
         <br />
-        <input
-          type="password"
-          name="password"
-          value={formData.password}
-          onChange={handleChange}
-          className={styles.input}
-          required
-        />
-      </label>
-      <br />
 
-      <button
-        type="submit"
-        className={styles.button}
-        disabled={authStore.loading}
-      >
-        {authStore.loading ? "Загрузка..." : "Войти"}
-      </button>
+        <button
+          type="submit"
+          className={styles.button}
+          disabled={authStore.loading}
+        >
+          {authStore.loading ? "Загрузка..." : "Войти"}
+        </button>
 
-      <span>
-        <NavLink to="/register" className={styles.register__link}>
-          Регистрация
-        </NavLink>
-      </span>
-    </form>
+        <span>
+          <NavLink to="/register" className={styles.register__link}>
+            Регистрация
+          </NavLink>
+        </span>
+        <div className={styles.google__login}>
+          <GoogleLoginButton />
+        </div>
+      </form>
+    </>
   );
 });
 

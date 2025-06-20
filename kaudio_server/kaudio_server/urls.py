@@ -89,6 +89,10 @@ urlpatterns = [
     
     # Обслуживание медиа файлов
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+    
+    path('auth/', include('dj_rest_auth.urls')),
+    path('auth/registration/', include('dj_rest_auth.registration.urls')),
+    path('auth/', include('allauth.socialaccount.urls')),
 ]
 
 # Добавление статических файлов в режиме разработки

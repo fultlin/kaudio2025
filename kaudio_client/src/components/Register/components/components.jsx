@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import authStore from "../../../stores/authStore";
 import styles from "./Register.module.scss";
+import GoogleLoginButton from "../../Login/GoogleLoginButton";
 
 const Form = () => {
   const [formData, setFormData] = useState({
@@ -93,6 +94,9 @@ const Form = () => {
       >
         {authStore.loading ? "Загрузка..." : "Зарегистрироваться"}
       </button>
+      <div style={{ marginTop: 24 }}>
+        <GoogleLoginButton />
+      </div>
     </form>
   );
 };

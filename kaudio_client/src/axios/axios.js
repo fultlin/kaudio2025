@@ -1,7 +1,11 @@
 import axios from "axios";
 
+const API_BASE_URL = "http://localhost:8000/api/";
+const AUTH_BASE_URL = "http://localhost:8000";
+
 const instance = axios.create({
-  baseURL: "http://localhost:8000/api/",
+  baseURL: API_BASE_URL,
+  withCredentials: true,
 });
 
 // Получаем токен из localStorage (проверяем оба возможных ключа)
@@ -9,10 +13,12 @@ const getAuthToken = () => {
   return localStorage.getItem("token") || localStorage.getItem("authToken");
 };
 
-// Добавляем интерцептор для логирования запросов и добавления токена
+// Перехватчик для смены baseURL на /auth/ для social login
 instance.interceptors.request.use(
   (config) => {
-    // Получаем токен
+    if (config.url.startsWith("/auth/")) {
+      config.baseURL = API_BASE_URL;
+    }
     const token = getAuthToken();
 
     // Если токен есть, добавляем его в заголовки
