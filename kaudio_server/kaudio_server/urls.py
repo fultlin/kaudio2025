@@ -85,6 +85,8 @@ urlpatterns = [
          schema_view.with_ui('redoc', cache_timeout=0), 
          name='schema-redoc'),
     
+    path('silk/', include('silk.urls', namespace='silk')),
+    
     # Обслуживание медиа файлов
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 ]

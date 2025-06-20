@@ -35,7 +35,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ВНИМАНИЕ: храните секретный ключ в тайне в продакшене!
 SECRET_KEY = 'django-insecure-5x^$=y3wp8#(%!*ram0&#&*nu=#wga-))%&knk$stz3=%71q83'
 
-DEBUG = False
+DEBUG = True
 # Включать DEBUG только при запуске тестов
 if 'test' in sys.argv:
     DEBUG = True
@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'drf_yasg',
     'corsheaders',
+    'silk',
     
     # Локальные приложения
     'kaudio',
@@ -76,6 +77,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'silk.middleware.SilkyMiddleware',
 ]
 
 # Настройки CORS для кросс-доменных запросов
