@@ -1,1 +1,3 @@
-# Пакет приложения kaudio_server 
+from .celery_app import celery
+
+__all__ = ('celery',) 

@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     
     # Локальные приложения
     'kaudio',
+    'django_celery_beat',
 ]
 
 MIDDLEWARE = [
@@ -269,3 +270,27 @@ sentry_sdk.init(
     # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
     send_default_pii=True,
 )
+
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+from celery.schedules import crontab
+CELERY_BEAT_SCHEDULE = {
+    'send-statistics-every-minute': {
+        'task': 'kaudio.tasks.send_statistics_email',
+        'schedule': crontab(),
+    },
+    'print-hello-every-minute': {
+        'task': 'kaudio.tasks.print_hello',
+        'schedule': crontab(),
+    },
+}
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'localhost'
+EMAIL_PORT = 1025
+EMAIL_HOST_USER = ''
+EMAIL_HOST_PASSWORD = ''
+EMAIL_USE_TLS = False
+DEFAULT_FROM_EMAIL = 'test@kaudio.local'
