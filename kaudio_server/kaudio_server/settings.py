@@ -23,7 +23,10 @@ from datetime import timedelta
 import os
 import sentry_sdk
 import sys
+from dotenv import load_dotenv
 
+# Загружаем переменные окружения из .env файла
+load_dotenv()
 
 # Пути к директориям проекта
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -33,7 +36,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # См. https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # ВНИМАНИЕ: храните секретный ключ в тайне в продакшене!
-SECRET_KEY = 'django-insecure-5x^$=y3wp8#(%!*ram0&#&*nu=#wga-))%&knk$stz3=%71q83'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-5x^$=y3wp8#(%!*ram0&#&*nu=#wga-))%&knk$stz3=%71q83')
 
 DEBUG = True
 # Включать DEBUG только при запуске тестов
@@ -95,6 +98,7 @@ CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # React dev server
     "http://localhost:5173",  # Vite dev server
+    "https://harmonious-zabaione-aa1493.netlify.app",  # Production frontend
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -276,7 +280,7 @@ if 'test' in sys.argv:
 
 # Sentry
 sentry_sdk.init(
-    dsn="https://7f1a3a062f809d43f239b7e1e2e3a0aa@o4509527088496640.ingest.de.sentry.io/4509527092822096",
+    dsn=os.environ.get('SENTRY_DSN', "https://7f1a3a062f809d43f239b7e1e2e3a0aa@o4509527088496640.ingest.de.sentry.io/4509527092822096"),
     # Add data like request headers and IP for users,
     # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
     send_default_pii=True,
