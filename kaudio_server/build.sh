@@ -2,6 +2,9 @@
 # exit on error
 set -o errexit
 
+# Обновляем pip и setuptools
+pip install --upgrade pip setuptools
+
 # Установка зависимостей
 pip install -r requirements.txt
 
