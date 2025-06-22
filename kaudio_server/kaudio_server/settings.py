@@ -24,6 +24,7 @@ import os
 import sentry_sdk
 import sys
 from dotenv import load_dotenv
+import dj_database_url
 
 # Загружаем переменные окружения из .env файла
 load_dotenv()
@@ -38,7 +39,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ВНИМАНИЕ: храните секретный ключ в тайне в продакшене!
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-5x^$=y3wp8#(%!*ram0&#&*nu=#wga-))%&knk$stz3=%71q83')
 
-DEBUG = True
+DEBUG = False
 # Включать DEBUG только при запуске тестов
 if 'test' in sys.argv:
     DEBUG = True
@@ -55,6 +56,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'whitenoise.runserver_nostatic', # должно быть над staticfiles
     'django.contrib.staticfiles',
     'django_extensions',
     
@@ -64,6 +66,7 @@ INSTALLED_APPS = [
     'drf_yasg',
     'corsheaders',
     # 'silk',
+    # раскоментить на локалке
     
     # Локальные приложения
     'kaudio',
@@ -84,13 +87,15 @@ MIDDLEWARE = [
     # Django middleware
     'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'allauth.account.middleware.AccountMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # 'silk.middleware.SilkyMiddleware',
+    # 'silk.middleware.SilkyMiddleware', 
+    # раскоментить на локалке
 ]
 
 # Настройки CORS для кросс-доменных запросов
@@ -159,6 +164,13 @@ DATABASES = {
     }
 }
 
+# Настройка базы данных для Render
+if 'DATABASE_URL' in os.environ:
+    DATABASES['default'] = dj_database_url.config(
+        conn_max_age=600,
+        ssl_require=True
+    )
+
 
 # Валидация паролей
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
@@ -195,7 +207,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Тип поля первичного ключа по умолчанию
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
