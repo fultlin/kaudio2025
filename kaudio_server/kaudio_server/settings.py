@@ -65,7 +65,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'drf_yasg',
     'corsheaders',
-    # 'silk',
+    'silk',
     # раскоментить на локалке
     
     # Локальные приложения
@@ -94,7 +94,7 @@ MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # 'silk.middleware.SilkyMiddleware', 
+    'silk.middleware.SilkyMiddleware', 
     # раскоментить на локалке
 ]
 
