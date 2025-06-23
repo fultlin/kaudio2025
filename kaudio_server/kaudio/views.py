@@ -1625,9 +1625,9 @@ def social_login_view(request):
             return Response({'error': 'Email не найден в id_token'}, status=400)
     except Exception as e:
         import traceback
-        print(traceback.format_exc())
-        return Response({'error': f'Ошибка валидации id_token: {str(e)}'}, status=400)
-
+        logger.error(traceback.format_exc())
+        return Response({'error': f'Ошибка валидации id_token: {str(e)}', 'trace': traceback.format_exc()}, status=400)
+    
     user, created = User.objects.get_or_create(email=email, defaults={
         'username': email.split('@')[0],
         'role': 'user',
